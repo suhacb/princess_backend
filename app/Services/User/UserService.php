@@ -3,6 +3,7 @@
 namespace App\Services\User;
 
 use App\Classes\Auth\TokenParser;
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -37,7 +38,7 @@ class UserService
         }
 
         $user = DB::transaction(function () use ($claims) {
-            return User::firstOrCreate(
+            $user = User::firstOrCreate(
                 ['external_id' => $claims['sub']],
                 [
                     'username' => $claims['preferred_username'],
@@ -47,6 +48,16 @@ class UserService
                     'lname'    => $claims['family_name'] ?? null,
                 ]
             );
+
+            if (is_null($user->person_id)) {
+                $person = Person::firstOrCreate(
+                    ['email' => $claims['email']],
+                    ['name'  => $claims['name']]
+                );
+                $user->update(['person_id' => $person->id]);
+            }
+
+            return $user;
         }, 3);
 
         $roles = collect($claims['realm_access']['roles'] ?? [])
