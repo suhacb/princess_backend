@@ -99,13 +99,13 @@ Example: `feature/INFRA-01-docker-compose`
 
 This applies to every system boundary where Princess talks to something outside its own process:
 
-| External System | Service Provider | Issues |
-|---|---|---|
-| Microsoft Graph API (M365) | `GraphServiceProvider` | M365-01 through M365-06 |
-| Keycloak JWKS endpoint | `KeycloakServiceProvider` | AUTH-01 |
-| Ollama inference API | `OllamaServiceProvider` | AI-01 through AI-04 |
-| Qdrant vector store | `QdrantServiceProvider` | DOC-04 |
-| ZincSearch | `ZincSearchServiceProvider` | DOC-03 |
+| External System | Service Provider | Contract | Issues |
+|---|---|---|---|
+| `auth_backend` gateway | `AuthServiceProvider` | `AuthGatewayClientContract` | AUTH-01 |
+| Microsoft Graph API (M365) | `GraphServiceProvider` | `GraphClientContract` | M365-01 through M365-06 |
+| Ollama inference API | `OllamaServiceProvider` | `OllamaClientContract` | AI-01 through AI-04 |
+| Qdrant vector store | `QdrantServiceProvider` | `QdrantClientContract` | DOC-04 |
+| ZincSearch | `ZincSearchServiceProvider` | `ZincSearchClientContract` | DOC-03 |
 
 **What each Service Provider must do:**
 - Bind a typed contract (interface) into the service container — no class is allowed to `new` a client directly
@@ -123,7 +123,38 @@ New issues (INFRA-05) establish the base interface/provider scaffolding before t
 ---
 
 ### Auth Flow
-All requests carry a JWT issued by the Keycloak-backed custom gateway. The Laravel backend validates the JWT (signature + claims) via middleware; roles/permissions are encoded as claims. The Angular frontend delegates login entirely to the gateway redirect flow.
+
+Princess does **not** communicate with Keycloak directly. All auth is delegated to `auth_backend` (GitHub: `suhacb/auth_backend`), a dedicated Laravel service that wraps Keycloak. The reference implementation is `nutrients_backend` (GitHub: `suhacb/nutrients_backend`).
+
+**Token validation flow (per request):**
+1. Angular sends `Authorization: Bearer {token}` + `X-Refresh-Token` + `X-Application-Name` + `X-Client-Url` headers
+2. `VerifyFrontend` middleware calls `auth_backend` → `GET /api/auth/validate-access-token`
+3. `auth_backend` introspects with Keycloak; returns `true` (valid), a new `AccessToken` object (refreshed), or 401
+4. If valid/refreshed: `TokenParser` base64-decodes the JWT payload locally to extract claims (`sub`, `email`, `preferred_username`, `name`, etc.) — no local signature validation needed
+5. `UserService::handleUserFromToken()` does `firstOrCreate` on `users.external_id = sub`
+6. `Auth::login($user)` — request proceeds as authenticated
+
+**Login flow:**
+- `GET /api/auth/login` → returns `{ redirect_uri }` pointing to `auth_backend` frontend login page (with `appName` + `appUrl` query params)
+- After Keycloak login, auth_backend frontend returns tokens to the Angular app
+- Angular stores tokens and sends them on every subsequent request
+
+**Service Provider (`AuthServiceProvider`):**
+- Binds `AuthGatewayClientContract` → `AuthBackendClient` (an HTTP client wrapping auth_backend endpoints)
+- Config key: `config('princess.auth')` — see `config/princess.php`
+
+**Required env vars:**
+```
+AUTH_BACKEND_URL=
+AUTH_BACKEND_PORT=
+APP_NAME=princess
+APP_BACKEND_URL=
+APP_BACKEND_PORT=
+APP_FRONTEND_URL=
+APP_FRONTEND_PORT=
+```
+
+**Princess must be registered** as an `Application` record in `auth_backend`'s database (name, realm, client_id, client_secret, url, callback_url) before auth will work.
 
 ### M365 Integration
 Uses Microsoft Graph API with OAuth2 client credentials (for daemon polling) and delegated tokens where needed. Delta queries are used for SharePoint to minimize API calls. Email polling runs on a Laravel scheduled job; SharePoint delta sync runs as a separate queue worker.
