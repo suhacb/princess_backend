@@ -93,6 +93,35 @@ Example: `feature/INFRA-01-docker-compose`
 
 ## Architecture Notes
 
+### External Interfaces — Service Provider Rule
+
+**All external system integrations must be implemented as Laravel Service Providers.**
+
+This applies to every system boundary where Princess talks to something outside its own process:
+
+| External System | Service Provider | Issues |
+|---|---|---|
+| Microsoft Graph API (M365) | `GraphServiceProvider` | M365-01 through M365-06 |
+| Keycloak JWKS endpoint | `KeycloakServiceProvider` | AUTH-01 |
+| Ollama inference API | `OllamaServiceProvider` | AI-01 through AI-04 |
+| Qdrant vector store | `QdrantServiceProvider` | DOC-04 |
+| ZincSearch | `ZincSearchServiceProvider` | DOC-03 |
+
+**What each Service Provider must do:**
+- Bind a typed contract (interface) into the service container — no class is allowed to `new` a client directly
+- Read all connection config from `config/services.php` (populated from env) — no hardcoded URLs or credentials anywhere in service code
+- Register a singleton client instance with connection health-check on boot (dev only) or on demand (production)
+- Expose a Facade for ergonomic call-site usage where appropriate
+
+**Why:**
+- Swap or mock any external system in tests without touching call sites
+- Consolidate env/config validation for each integration in one place
+- A misconfigured integration fails fast at boot rather than deep in a job
+
+New issues (INFRA-05) establish the base interface/provider scaffolding before the integration phases begin.
+
+---
+
 ### Auth Flow
 All requests carry a JWT issued by the Keycloak-backed custom gateway. The Laravel backend validates the JWT (signature + claims) via middleware; roles/permissions are encoded as claims. The Angular frontend delegates login entirely to the gateway redirect flow.
 
