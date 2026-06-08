@@ -14,11 +14,32 @@ class LoginController extends Controller
 {
     public function __construct(private readonly AuthService $service) {}
 
+    /**
+     * Get auth gateway login URL.
+     *
+     * Returns a redirect URI to the auth gateway login page. The frontend
+     * should redirect the user to this URL to initiate the Keycloak login flow.
+     *
+     * @unauthenticated
+     * @response {"redirect_uri": "http://auth.example.com:9020/login?appName=Princess&appUrl=http://localhost:10100"}
+     */
     public function login(): JsonResponse
     {
         return response()->json(['redirect_uri' => $this->service->login()]);
     }
 
+    /**
+     * Validate access token against the auth gateway.
+     *
+     * Forwards the token to the auth backend for validation and returns the result.
+     * Requires `Authorization: Bearer <token>`, `X-Refresh-Token`, `X-Application-Name`,
+     * and `X-Client-Url` headers.
+     *
+     * @unauthenticated
+     * @response {"valid": true}
+     * @response 401 {"error": "Unauthorized"}
+     * @response 503 {"error": "Token validation service unavailable"}
+     */
     public function validateAccessToken(Request $request): JsonResponse
     {
         $accessToken  = $request->bearerToken();
@@ -47,6 +68,18 @@ class LoginController extends Controller
         }
     }
 
+    /**
+     * Log out from the auth gateway.
+     *
+     * Forwards the logout request to the auth backend and invalidates the session.
+     * Requires `Authorization: Bearer <token>`, `X-Refresh-Token`, `X-Application-Name`,
+     * and `X-Client-Url` headers.
+     *
+     * @unauthenticated
+     * @response {"message": "Logged out successfully"}
+     * @response 401 {"error": "Unauthorized"}
+     * @response 503 {"error": "Logout service unavailable"}
+     */
     public function logout(Request $request): JsonResponse
     {
         $accessToken  = $request->bearerToken();
