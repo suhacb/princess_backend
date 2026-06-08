@@ -2,8 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Project\StoreProjectRequest;
-use App\Http\Requests\Project\UpdateProjectRequest;
+use App\Http\Requests\Project\ProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Models\Stage;
@@ -32,7 +31,7 @@ class ProjectController extends Controller
      * @response 201 {"data": {"id": 1, "name": "Core Banking", "status": "pre_project"}}
      * @response 422 {"message": "The name field is required."}
      */
-    public function store(StoreProjectRequest $request): ProjectResource
+    public function store(ProjectRequest $request): ProjectResource
     {
         $project = Project::create(array_merge(
             $request->validated(),
@@ -62,7 +61,7 @@ class ProjectController extends Controller
      * @response 404 {"message": "Not found."}
      * @response 422 {"message": "The name field is required."}
      */
-    public function update(UpdateProjectRequest $request, Project $project): ProjectResource
+    public function update(ProjectRequest $request, Project $project): ProjectResource
     {
         $project->update(array_merge(
             $request->validated(),

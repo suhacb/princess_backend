@@ -3,9 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\StageStatus;
-use App\Http\Requests\Stage\StoreStageRequest;
+use App\Http\Requests\Stage\StageRequest;
 use App\Http\Requests\Stage\TransitionStageRequest;
-use App\Http\Requests\Stage\UpdateStageRequest;
 use App\Http\Resources\StageResource;
 use App\Models\Project;
 use App\Models\Stage;
@@ -33,7 +32,7 @@ class StageController extends Controller
      * @response 201 {"data": {"id": 1, "name": "Initiation", "type": "initiation"}}
      * @response 422 {"message": "The name field is required."}
      */
-    public function store(StoreStageRequest $request, Project $project): StageResource
+    public function store(StageRequest $request, Project $project): StageResource
     {
         $stage = $project->stages()->create(array_merge(
             $request->validated(),
@@ -61,7 +60,7 @@ class StageController extends Controller
      * @response 404 {"message": "Not found."}
      * @response 422 {"message": "The name field is required."}
      */
-    public function update(UpdateStageRequest $request, Project $project, Stage $stage): StageResource
+    public function update(StageRequest $request, Project $project, Stage $stage): StageResource
     {
         $stage->update(array_merge(
             $request->validated(),
