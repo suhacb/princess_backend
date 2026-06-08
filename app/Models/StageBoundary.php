@@ -12,6 +12,10 @@ class StageBoundary extends Model
 {
     use HasFactory;
 
+    protected $attributes = [
+        'status' => 'draft',
+    ];
+
     protected $fillable = [
         'stage_id',
         'type',

@@ -13,6 +13,11 @@ class Project extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $attributes = [
+        'status'  => 'pre_project',
+        'version' => 1,
+    ];
+
     protected $fillable = [
         'name',
         'reference',

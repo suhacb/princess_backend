@@ -14,6 +14,11 @@ class Stage extends Model
 {
     use HasFactory, SoftDeletes;
 
+    protected $attributes = [
+        'status'  => 'planned',
+        'version' => 1,
+    ];
+
     protected $fillable = [
         'project_id',
         'name',
