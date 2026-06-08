@@ -3,10 +3,11 @@
 namespace Tests\Unit\Auth;
 
 use App\Classes\Auth\TokenParser;
+use App\Enums\PersonSide;
 use App\Services\User\UserService;
+use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use InvalidArgumentException;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class UserServiceTest extends TestCase
@@ -19,9 +20,7 @@ class UserServiceTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['project_manager', 'project_board', 'quality_assurance', 'team_manager', 'observer'] as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        }
+        $this->seed(RoleAndPermissionSeeder::class);
 
         $this->service = new UserService(new TokenParser());
     }
@@ -42,6 +41,7 @@ class UserServiceTest extends TestCase
             'given_name'         => 'Test',
             'family_name'        => 'User',
             'realm_access'       => ['roles' => []],
+            'groups'             => [],
         ], $overrides);
     }
 
@@ -86,10 +86,8 @@ class UserServiceTest extends TestCase
 
     public function test_syncs_roles_on_subsequent_login_removing_revoked_roles(): void
     {
-        $sub = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-
         $this->service->handleUserFromToken($this->buildToken($this->validClaims([
-            'realm_access' => ['roles' => ['project_manager', 'project_board']],
+            'realm_access' => ['roles' => ['project_manager', 'observer']],
         ])));
 
         $user = $this->service->handleUserFromToken($this->buildToken($this->validClaims([
@@ -97,7 +95,7 @@ class UserServiceTest extends TestCase
         ])));
 
         $this->assertTrue($user->hasRole('project_manager'));
-        $this->assertFalse($user->hasRole('project_board'));
+        $this->assertFalse($user->hasRole('observer'));
     }
 
     public function test_throws_when_sub_claim_missing(): void
@@ -149,5 +147,32 @@ class UserServiceTest extends TestCase
         $this->service->handleUserFromToken($token);
 
         $this->assertEquals($originalPersonId, $user->fresh()->person_id);
+    }
+
+    public function test_syncs_side_customer_from_keycloak_group(): void
+    {
+        $claims = $this->validClaims(['groups' => ['/customer']]);
+
+        $user = $this->service->handleUserFromToken($this->buildToken($claims));
+
+        $this->assertEquals(PersonSide::Customer, $user->person->fresh()->side);
+    }
+
+    public function test_syncs_side_supplier_from_keycloak_group(): void
+    {
+        $claims = $this->validClaims(['groups' => ['/supplier']]);
+
+        $user = $this->service->handleUserFromToken($this->buildToken($claims));
+
+        $this->assertEquals(PersonSide::Supplier, $user->person->fresh()->side);
+    }
+
+    public function test_does_not_set_side_when_no_matching_group(): void
+    {
+        $claims = $this->validClaims(['groups' => ['/some-other-group']]);
+
+        $user = $this->service->handleUserFromToken($this->buildToken($claims));
+
+        $this->assertNull($user->person->fresh()->side);
     }
 }

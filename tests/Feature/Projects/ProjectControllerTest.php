@@ -7,8 +7,8 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Stage;
 use App\Models\User;
+use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ProjectControllerTest extends TestCase
@@ -24,14 +24,20 @@ class ProjectControllerTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
 
-        foreach (['project_manager', 'project_board', 'quality_assurance', 'team_manager', 'observer'] as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        }
+        $this->seed(RoleAndPermissionSeeder::class);
 
         $this->person = Person::factory()->create();
         $this->user   = User::factory()->create(['person_id' => $this->person->id]);
         $this->user->assignRole('project_manager');
         $this->actingAs($this->user);
+    }
+
+    private function addMember(Project $project): void
+    {
+        $project->members()->create([
+            'person_id' => $this->person->id,
+            'role'      => 'project_manager',
+        ]);
     }
 
     public function test_index_returns_paginated_projects(): void
@@ -69,6 +75,7 @@ class ProjectControllerTest extends TestCase
     public function test_show_returns_project_with_stages(): void
     {
         $project = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->addMember($project);
         Stage::factory()->count(2)->create(['project_id' => $project->id]);
 
         $this->getJson("/api/projects/{$project->id}")
@@ -82,9 +89,17 @@ class ProjectControllerTest extends TestCase
         $this->getJson('/api/projects/999')->assertNotFound();
     }
 
+    public function test_show_returns_403_when_not_a_member(): void
+    {
+        $project = Project::factory()->create();
+
+        $this->getJson("/api/projects/{$project->id}")->assertForbidden();
+    }
+
     public function test_update_modifies_project(): void
     {
         $project = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->addMember($project);
 
         $this->putJson("/api/projects/{$project->id}", ['name' => 'Renamed'])
             ->assertOk()
@@ -94,6 +109,7 @@ class ProjectControllerTest extends TestCase
     public function test_update_sets_updated_by(): void
     {
         $project = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->addMember($project);
 
         $this->putJson("/api/projects/{$project->id}", ['name' => 'Renamed'])
             ->assertOk()
@@ -103,6 +119,7 @@ class ProjectControllerTest extends TestCase
     public function test_destroy_soft_deletes_project(): void
     {
         $project = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->addMember($project);
 
         $this->deleteJson("/api/projects/{$project->id}")->assertNoContent();
 
@@ -112,7 +129,8 @@ class ProjectControllerTest extends TestCase
     public function test_set_current_stage_updates_project(): void
     {
         $project = Project::factory()->create(['created_by' => $this->person->id]);
-        $stage   = Stage::factory()->create(['project_id' => $project->id]);
+        $this->addMember($project);
+        $stage = Stage::factory()->create(['project_id' => $project->id]);
 
         $this->patchJson("/api/projects/{$project->id}/current-stage", ['stage_id' => $stage->id])
             ->assertOk()
@@ -122,6 +140,7 @@ class ProjectControllerTest extends TestCase
     public function test_set_current_stage_rejects_stage_from_another_project(): void
     {
         $project      = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->addMember($project);
         $otherProject = Project::factory()->create();
         $stage        = Stage::factory()->create(['project_id' => $otherProject->id]);
 

@@ -3,6 +3,7 @@
 namespace App\Services\User;
 
 use App\Classes\Auth\TokenParser;
+use App\Enums\PersonSide;
 use App\Models\Person;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -11,14 +12,36 @@ use InvalidArgumentException;
 class UserService
 {
     private const KNOWN_ROLES = [
+        'executive',
+        'senior_user',
+        'senior_supplier',
         'project_manager',
-        'project_board',
-        'quality_assurance',
+        'project_assurance',
+        'project_support',
+        'change_authority',
         'team_manager',
+        'team_member',
         'observer',
     ];
 
+    private const GROUP_SIDE_MAP = [
+        '/customer' => PersonSide::Customer,
+        '/supplier' => PersonSide::Supplier,
+        '/neutral'  => PersonSide::Neutral,
+    ];
+
     public function __construct(private readonly TokenParser $parser) {}
+
+    private function resolveSide(array $groups): ?PersonSide
+    {
+        foreach ($groups as $group) {
+            if (isset(self::GROUP_SIDE_MAP[$group])) {
+                return self::GROUP_SIDE_MAP[$group];
+            }
+        }
+
+        return null;
+    }
 
     public function handleUserFromToken(string $token): User
     {
@@ -55,6 +78,11 @@ class UserService
                     ['name'  => $claims['name']]
                 );
                 $user->update(['person_id' => $person->id]);
+            }
+
+            $side = $this->resolveSide($claims['groups'] ?? []);
+            if ($side !== null) {
+                $user->person->update(['side' => $side]);
             }
 
             return $user;

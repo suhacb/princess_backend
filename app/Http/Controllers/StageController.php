@@ -21,6 +21,8 @@ class StageController extends Controller
      */
     public function index(Project $project): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', [Stage::class, $project]);
+
         $stages = $project->stages()->with('createdBy')->get();
 
         return StageResource::collection($stages);
@@ -34,6 +36,8 @@ class StageController extends Controller
      */
     public function store(StageRequest $request, Project $project): StageResource
     {
+        $this->authorize('create', [Stage::class, $project]);
+
         $stage = $project->stages()->create(array_merge(
             $request->validated(),
             ['created_by' => auth()->user()->person_id],
@@ -50,6 +54,8 @@ class StageController extends Controller
      */
     public function show(Project $project, Stage $stage): StageResource
     {
+        $this->authorize('view', [Stage::class, $project, $stage]);
+
         return new StageResource($stage->load(['createdBy', 'updatedBy']));
     }
 
@@ -62,6 +68,8 @@ class StageController extends Controller
      */
     public function update(StageRequest $request, Project $project, Stage $stage): StageResource
     {
+        $this->authorize('update', [Stage::class, $project, $stage]);
+
         $stage->update(array_merge(
             $request->validated(),
             ['updated_by' => auth()->user()->person_id],
@@ -78,6 +86,8 @@ class StageController extends Controller
      */
     public function destroy(Project $project, Stage $stage): Response
     {
+        $this->authorize('delete', [Stage::class, $project, $stage]);
+
         $stage->delete();
 
         return response()->noContent();
@@ -94,6 +104,8 @@ class StageController extends Controller
      */
     public function transition(TransitionStageRequest $request, Project $project, Stage $stage): StageResource
     {
+        $this->authorize('transition', [Stage::class, $project, $stage]);
+
         $stage->update([
             'status'     => StageStatus::from($request->validated('status')),
             'updated_by' => auth()->user()->person_id,

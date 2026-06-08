@@ -6,7 +6,6 @@ use App\Http\Requests\Project\ProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Models\Stage;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -20,6 +19,8 @@ class ProjectController extends Controller
      */
     public function index(): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', Project::class);
+
         $projects = Project::with('createdBy')->withCount('stages')->paginate(20);
 
         return ProjectResource::collection($projects);
@@ -33,6 +34,8 @@ class ProjectController extends Controller
      */
     public function store(ProjectRequest $request): ProjectResource
     {
+        $this->authorize('create', Project::class);
+
         $project = Project::create(array_merge(
             $request->validated(),
             ['created_by' => auth()->user()->person_id],
@@ -49,6 +52,8 @@ class ProjectController extends Controller
      */
     public function show(Project $project): ProjectResource
     {
+        $this->authorize('view', $project);
+
         return new ProjectResource(
             $project->load(['currentStage', 'stages', 'createdBy', 'updatedBy'])
         );
@@ -63,6 +68,8 @@ class ProjectController extends Controller
      */
     public function update(ProjectRequest $request, Project $project): ProjectResource
     {
+        $this->authorize('update', $project);
+
         $project->update(array_merge(
             $request->validated(),
             ['updated_by' => auth()->user()->person_id],
@@ -79,6 +86,8 @@ class ProjectController extends Controller
      */
     public function destroy(Project $project): Response
     {
+        $this->authorize('delete', $project);
+
         $project->delete();
 
         return response()->noContent();
@@ -93,6 +102,8 @@ class ProjectController extends Controller
      */
     public function setCurrentStage(Request $request, Project $project): ProjectResource
     {
+        $this->authorize('setCurrentStage', $project);
+
         $validated = $request->validate([
             'stage_id' => ['required', 'integer'],
         ]);
