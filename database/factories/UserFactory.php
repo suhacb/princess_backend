@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Person;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -17,6 +18,7 @@ class UserFactory extends Factory
         $lastName  = fake()->lastName();
 
         return [
+            'person_id'   => null,
             'external_id' => Str::uuid()->toString(),
             'username'    => fake()->unique()->userName(),
             'email'       => fake()->unique()->safeEmail(),
@@ -24,5 +26,12 @@ class UserFactory extends Factory
             'fname'       => $firstName,
             'lname'       => $lastName,
         ];
+    }
+
+    public function withPerson(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'person_id' => Person::factory()->create(['email' => $attributes['email'], 'name' => $attributes['name']])->id,
+        ]);
     }
 }

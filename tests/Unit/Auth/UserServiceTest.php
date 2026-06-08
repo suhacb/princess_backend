@@ -119,4 +119,35 @@ class UserServiceTest extends TestCase
 
         $this->service->handleUserFromToken($this->buildToken($claims));
     }
+
+    public function test_creates_and_links_person_on_first_login(): void
+    {
+        $claims = $this->validClaims();
+
+        $user = $this->service->handleUserFromToken($this->buildToken($claims));
+
+        $this->assertNotNull($user->person_id);
+        $this->assertDatabaseHas('people', ['email' => $claims['email'], 'name' => $claims['name']]);
+    }
+
+    public function test_reuses_existing_person_on_subsequent_login(): void
+    {
+        $token = $this->buildToken($this->validClaims());
+
+        $this->service->handleUserFromToken($token);
+        $this->service->handleUserFromToken($token);
+
+        $this->assertDatabaseCount('people', 1);
+    }
+
+    public function test_does_not_overwrite_person_link_if_already_set(): void
+    {
+        $token = $this->buildToken($this->validClaims());
+        $user  = $this->service->handleUserFromToken($token);
+
+        $originalPersonId = $user->person_id;
+        $this->service->handleUserFromToken($token);
+
+        $this->assertEquals($originalPersonId, $user->fresh()->person_id);
+    }
 }
