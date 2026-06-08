@@ -9,8 +9,8 @@ use App\Models\Project;
 use App\Models\Stage;
 use App\Models\StageBoundary;
 use App\Models\User;
+use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class StageBoundaryControllerTest extends TestCase
@@ -28,9 +28,7 @@ class StageBoundaryControllerTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
 
-        foreach (['project_manager', 'project_board', 'quality_assurance', 'team_manager', 'observer'] as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        }
+        $this->seed(RoleAndPermissionSeeder::class);
 
         $this->person  = Person::factory()->create();
         $this->user    = User::factory()->create(['person_id' => $this->person->id]);
@@ -38,7 +36,12 @@ class StageBoundaryControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $this->project = Project::factory()->create(['created_by' => $this->person->id]);
-        $this->stage   = Stage::factory()->create([
+        $this->project->members()->create([
+            'person_id' => $this->person->id,
+            'role'      => 'project_manager',
+        ]);
+
+        $this->stage = Stage::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->person->id,
         ]);
@@ -158,13 +161,22 @@ class StageBoundaryControllerTest extends TestCase
 
     public function test_approve_transitions_submitted_to_approved(): void
     {
+        $approver = Person::factory()->create();
+        $boardUser = User::factory()->create(['person_id' => $approver->id]);
+        $boardUser->assignRole('executive');
+        $this->project->members()->create([
+            'person_id' => $approver->id,
+            'role'      => 'executive',
+        ]);
+
         $boundary = StageBoundary::factory()->create([
             'stage_id'   => $this->stage->id,
             'created_by' => $this->person->id,
             'status'     => BoundaryStatus::Submitted,
         ]);
 
-        $this->patchJson("{$this->boundaryUrl($boundary)}/approve")
+        $this->actingAs($boardUser)
+            ->patchJson("{$this->boundaryUrl($boundary)}/approve")
             ->assertOk()
             ->assertJsonPath('data.status', BoundaryStatus::Approved->value);
 
@@ -173,15 +185,25 @@ class StageBoundaryControllerTest extends TestCase
 
     public function test_approve_rejects_non_submitted_boundary(): void
     {
+        $approver = Person::factory()->create();
+        $boardUser = User::factory()->create(['person_id' => $approver->id]);
+        $boardUser->assignRole('executive');
+        $this->project->members()->create([
+            'person_id' => $approver->id,
+            'role'      => 'executive',
+        ]);
+
         $boundary = StageBoundary::factory()->create([
             'stage_id'   => $this->stage->id,
             'created_by' => $this->person->id,
         ]);
 
-        $this->patchJson("{$this->boundaryUrl($boundary)}/approve")->assertStatus(409);
+        $this->actingAs($boardUser)
+            ->patchJson("{$this->boundaryUrl($boundary)}/approve")
+            ->assertStatus(409);
     }
 
-    public function test_reject_transitions_submitted_to_rejected(): void
+    public function test_approve_forbidden_for_project_manager(): void
     {
         $boundary = StageBoundary::factory()->create([
             'stage_id'   => $this->stage->id,
@@ -189,7 +211,27 @@ class StageBoundaryControllerTest extends TestCase
             'status'     => BoundaryStatus::Submitted,
         ]);
 
-        $this->patchJson("{$this->boundaryUrl($boundary)}/reject")
+        $this->patchJson("{$this->boundaryUrl($boundary)}/approve")->assertForbidden();
+    }
+
+    public function test_reject_transitions_submitted_to_rejected(): void
+    {
+        $approver = Person::factory()->create();
+        $boardUser = User::factory()->create(['person_id' => $approver->id]);
+        $boardUser->assignRole('executive');
+        $this->project->members()->create([
+            'person_id' => $approver->id,
+            'role'      => 'executive',
+        ]);
+
+        $boundary = StageBoundary::factory()->create([
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+            'status'     => BoundaryStatus::Submitted,
+        ]);
+
+        $this->actingAs($boardUser)
+            ->patchJson("{$this->boundaryUrl($boundary)}/reject")
             ->assertOk()
             ->assertJsonPath('data.status', BoundaryStatus::Rejected->value);
     }

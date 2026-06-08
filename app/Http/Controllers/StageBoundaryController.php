@@ -21,6 +21,8 @@ class StageBoundaryController extends Controller
      */
     public function index(Project $project, Stage $stage): AnonymousResourceCollection
     {
+        $this->authorize('viewAny', [StageBoundary::class, $project]);
+
         $boundaries = $stage->boundaries()->with(['createdBy', 'submittedBy', 'approvedBy'])->get();
 
         return StageBoundaryResource::collection($boundaries);
@@ -34,6 +36,8 @@ class StageBoundaryController extends Controller
      */
     public function store(StageBoundaryRequest $request, Project $project, Stage $stage): StageBoundaryResource
     {
+        $this->authorize('create', [StageBoundary::class, $project]);
+
         $boundary = $stage->boundaries()->create(array_merge(
             $request->validated(),
             ['created_by' => auth()->user()->person_id],
@@ -50,6 +54,8 @@ class StageBoundaryController extends Controller
      */
     public function show(Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
     {
+        $this->authorize('view', [StageBoundary::class, $project, $stage, $boundary]);
+
         return new StageBoundaryResource(
             $boundary->load(['createdBy', 'updatedBy', 'submittedBy', 'approvedBy'])
         );
@@ -64,6 +70,8 @@ class StageBoundaryController extends Controller
      */
     public function update(StageBoundaryRequest $request, Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
     {
+        $this->authorize('update', [StageBoundary::class, $project, $stage, $boundary]);
+
         abort_if(
             $boundary->status !== BoundaryStatus::Draft,
             409,
@@ -87,6 +95,8 @@ class StageBoundaryController extends Controller
      */
     public function destroy(Project $project, Stage $stage, StageBoundary $boundary): Response
     {
+        $this->authorize('delete', [StageBoundary::class, $project, $stage, $boundary]);
+
         abort_if(
             $boundary->status !== BoundaryStatus::Draft,
             409,
@@ -106,6 +116,8 @@ class StageBoundaryController extends Controller
      */
     public function submit(Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
     {
+        $this->authorize('submit', [StageBoundary::class, $project, $stage, $boundary]);
+
         abort_if(
             $boundary->status !== BoundaryStatus::Draft,
             409,
@@ -132,6 +144,8 @@ class StageBoundaryController extends Controller
      */
     public function approve(Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
     {
+        $this->authorize('approveReject', [StageBoundary::class, $project, $stage, $boundary]);
+
         abort_if(
             $boundary->status !== BoundaryStatus::Submitted,
             409,
@@ -158,6 +172,8 @@ class StageBoundaryController extends Controller
      */
     public function reject(Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
     {
+        $this->authorize('approveReject', [StageBoundary::class, $project, $stage, $boundary]);
+
         abort_if(
             $boundary->status !== BoundaryStatus::Submitted,
             409,

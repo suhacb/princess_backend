@@ -8,8 +8,8 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Stage;
 use App\Models\User;
+use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class StageControllerTest extends TestCase
@@ -26,9 +26,7 @@ class StageControllerTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
 
-        foreach (['project_manager', 'project_board', 'quality_assurance', 'team_manager', 'observer'] as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
-        }
+        $this->seed(RoleAndPermissionSeeder::class);
 
         $this->person  = Person::factory()->create();
         $this->user    = User::factory()->create(['person_id' => $this->person->id]);
@@ -36,6 +34,10 @@ class StageControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $this->project = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->project->members()->create([
+            'person_id' => $this->person->id,
+            'role'      => 'project_manager',
+        ]);
     }
 
     public function test_index_lists_stages_for_project(): void

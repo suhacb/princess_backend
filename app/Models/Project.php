@@ -57,6 +57,11 @@ class Project extends Model
         return $this->belongsTo(Stage::class, 'current_stage_id');
     }
 
+    public function members(): HasMany
+    {
+        return $this->hasMany(ProjectMember::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');
