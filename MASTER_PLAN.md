@@ -13,7 +13,7 @@ Princess is a PRINCE2-aligned project management platform built for the PM, Proj
 | Database | PostgreSQL |
 | Vector store | Qdrant |
 | Full-text search | ZincSearch |
-| AI inference | Ollama (gemma4:27b for heavy, gemma4:e4b for fast) |
+| AI inference | Ollama (gemma4:26b for heavy, gemma4:e4b for fast) |
 | Auth | Custom gateway → Keycloak (JWT) |
 | Integrations | Microsoft 365 (Graph API) — email, SharePoint, Teams |
 | Infrastructure | Docker Compose (on-prem) |

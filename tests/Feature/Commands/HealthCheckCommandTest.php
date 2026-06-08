@@ -7,6 +7,7 @@ use App\Contracts\GraphClientContract;
 use App\Contracts\OllamaClientContract;
 use App\Contracts\QdrantClientContract;
 use App\Contracts\ZincSearchClientContract;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
 
@@ -27,6 +28,7 @@ class HealthCheckCommandTest extends TestCase
         }
 
         Redis::shouldReceive('ping')->andReturn($healthy);
+        DB::shouldReceive('select')->with('SELECT 1')->andReturn($healthy ? [['1' => 1]] : []);
     }
 
     public function test_exits_successfully_when_all_services_are_healthy(): void

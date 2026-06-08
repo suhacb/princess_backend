@@ -23,7 +23,7 @@ class HealthCheckCommand extends Command
         $this->newLine();
 
         $checks = [
-            'Database'     => fn () => DB::connection()->getPdo() !== null,
+            'Database'     => fn () => (bool) DB::select('SELECT 1'),
             'Redis'        => fn () => (bool) Redis::ping(),
             'Auth Backend' => fn () => app(AuthGatewayClientContract::class)->ping(),
             'ZincSearch'   => fn () => app(ZincSearchClientContract::class)->ping(),
