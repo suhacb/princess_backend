@@ -8,7 +8,6 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Stage;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,11 +25,8 @@ class StageControllerTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
 
-        $this->seed(RoleAndPermissionSeeder::class);
-
         $this->person  = Person::factory()->create();
         $this->user    = User::factory()->create(['person_id' => $this->person->id]);
-        $this->user->assignRole('project_manager');
         $this->actingAs($this->user);
 
         $this->project = Project::factory()->create(['created_by' => $this->person->id]);

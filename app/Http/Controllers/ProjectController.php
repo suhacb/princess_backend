@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ProjectRole;
 use App\Http\Requests\Project\ProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
@@ -36,10 +37,17 @@ class ProjectController extends Controller
     {
         $this->authorize('create', Project::class);
 
+        $personId = auth()->user()->person_id;
+
         $project = Project::create(array_merge(
             $request->validated(),
-            ['created_by' => auth()->user()->person_id],
+            ['created_by' => $personId],
         ));
+
+        $project->members()->create([
+            'person_id' => $personId,
+            'role'      => ProjectRole::ProjectManager->value,
+        ]);
 
         return new ProjectResource($project->load(['createdBy']));
     }
