@@ -1,9 +1,15 @@
 <?php
 
+use App\Http\Controllers\ChangeLogController;
+use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\IssueLogController;
+use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\QualityRegisterController;
+use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StageBoundaryController;
 use App\Http\Controllers\StageController;
 use Illuminate\Support\Facades\Route;
@@ -35,4 +41,24 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.stages.boundaries.approve');
     Route::patch('projects/{project}/stages/{stage}/boundaries/{boundary}/reject', [StageBoundaryController::class, 'reject'])
         ->name('projects.stages.boundaries.reject');
+
+    Route::apiResource('projects.daily-log', DailyLogController::class)->parameters(['daily-log' => 'dailyLogEntry']);
+
+    Route::apiResource('projects.issues', IssueLogController::class);
+    Route::post('projects/{project}/issues/{issue}/escalate', [IssueLogController::class, 'escalate'])
+        ->name('projects.issues.escalate');
+    Route::post('projects/{project}/issues/{issue}/resolve', [IssueLogController::class, 'resolve'])
+        ->name('projects.issues.resolve');
+
+    Route::apiResource('projects.risks', RiskController::class);
+
+    Route::apiResource('projects.changes', ChangeLogController::class);
+    Route::patch('projects/{project}/changes/{change}/approve', [ChangeLogController::class, 'approve'])
+        ->name('projects.changes.approve');
+    Route::patch('projects/{project}/changes/{change}/reject', [ChangeLogController::class, 'reject'])
+        ->name('projects.changes.reject');
+
+    Route::apiResource('projects.quality-register', QualityRegisterController::class)->parameters(['quality-register' => 'qualityRegisterEntry']);
+
+    Route::apiResource('projects.lessons', LessonController::class);
 });
