@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Project;
+use App\Models\ProjectMember;
 use App\Models\Stage;
 use App\Models\StageBoundary;
+use App\Policies\ProjectMemberPolicy;
 use App\Policies\ProjectPolicy;
 use App\Policies\StageBoundaryPolicy;
 use App\Policies\StagePolicy;
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Project::class, ProjectPolicy::class);
+        Gate::policy(ProjectMember::class, ProjectMemberPolicy::class);
         Gate::policy(Stage::class, StagePolicy::class);
         Gate::policy(StageBoundary::class, StageBoundaryPolicy::class);
 

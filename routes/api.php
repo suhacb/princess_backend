@@ -3,6 +3,7 @@
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\StageBoundaryController;
 use App\Http\Controllers\StageController;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,8 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects', ProjectController::class);
     Route::patch('projects/{project}/current-stage', [ProjectController::class, 'setCurrentStage'])
         ->name('projects.set-current-stage');
+
+    Route::apiResource('projects.members', ProjectMemberController::class)->except('show');
 
     Route::apiResource('projects.stages', StageController::class);
     Route::patch('projects/{project}/stages/{stage}/transition', [StageController::class, 'transition'])
