@@ -7,7 +7,6 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Stage;
 use App\Models\User;
-use Database\Seeders\RoleAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -24,19 +23,16 @@ class ProjectControllerTest extends TestCase
 
         $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
 
-        $this->seed(RoleAndPermissionSeeder::class);
-
         $this->person = Person::factory()->create();
         $this->user   = User::factory()->create(['person_id' => $this->person->id]);
-        $this->user->assignRole('project_manager');
         $this->actingAs($this->user);
     }
 
-    private function addMember(Project $project): void
+    private function addMember(Project $project, string $role = 'project_manager'): void
     {
         $project->members()->create([
             'person_id' => $this->person->id,
-            'role'      => 'project_manager',
+            'role'      => $role,
         ]);
     }
 
@@ -63,6 +59,20 @@ class ProjectControllerTest extends TestCase
         $this->postJson('/api/projects', ['name' => 'Test Project'])
             ->assertCreated()
             ->assertJsonPath('data.created_by.id', $this->person->id);
+    }
+
+    public function test_store_adds_creator_as_project_manager(): void
+    {
+        $response = $this->postJson('/api/projects', ['name' => 'Test Project'])
+            ->assertCreated();
+
+        $projectId = $response->json('data.id');
+
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $projectId,
+            'person_id'  => $this->person->id,
+            'role'       => 'project_manager',
+        ]);
     }
 
     public function test_store_returns_422_when_name_missing(): void

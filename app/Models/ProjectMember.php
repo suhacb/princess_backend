@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\PersonSide;
+use App\Enums\ProjectRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -11,6 +13,12 @@ class ProjectMember extends Model
         'project_id',
         'person_id',
         'role',
+        'side',
+    ];
+
+    protected $casts = [
+        'role' => ProjectRole::class,
+        'side' => PersonSide::class,
     ];
 
     public function project(): BelongsTo

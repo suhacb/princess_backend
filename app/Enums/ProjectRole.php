@@ -1,89 +1,29 @@
 <?php
 
-namespace Database\Seeders;
+namespace App\Enums;
 
-use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
-
-class RoleAndPermissionSeeder extends Seeder
+enum ProjectRole: string
 {
-    public function run(): void
+    case Executive        = 'executive';
+    case SeniorUser       = 'senior_user';
+    case SeniorSupplier   = 'senior_supplier';
+    case ProjectManager   = 'project_manager';
+    case ProjectAssurance = 'project_assurance';
+    case ProjectSupport   = 'project_support';
+    case ChangeAuthority  = 'change_authority';
+    case TeamManager      = 'team_manager';
+    case TeamMember       = 'team_member';
+    case Observer         = 'observer';
+
+    public function can(string $permission): bool
     {
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        return in_array($permission, $this->permissions());
+    }
 
-        $permissions = [
-            // Projects
-            'projects:read',
-            'projects:create',
-            'projects:update',
-            'projects:delete',
-
-            // Stages
-            'stages:read',
-            'stages:manage',
-            'stages:transition',
-
-            // Stage boundaries
-            'boundaries:read',
-            'boundaries:manage',
-            'boundaries:submit',
-            'boundaries:approve-reject',
-
-            // Daily log
-            'daily-log:read',
-            'daily-log:manage',
-
-            // Issue log
-            'issue-log:read',
-            'issue-log:create',
-            'issue-log:manage',
-            'issue-log:escalate',
-
-            // Risk log
-            'risk-log:read',
-            'risk-log:create',
-            'risk-log:manage',
-
-            // Change log
-            'change-log:read',
-            'change-log:create',
-            'change-log:manage',
-            'change-log:approve-minor',
-            'change-log:approve-major',
-
-            // Quality register
-            'quality-register:read',
-            'quality-register:manage',
-
-            // Lessons log
-            'lessons-log:read',
-            'lessons-log:create',
-            'lessons-log:manage',
-
-            // Plans & tasks
-            'plans:read',
-            'plans:manage',
-            'tasks:read',
-            'tasks:manage',
-            'tasks:update-own',
-
-            // Reports
-            'reports:read',
-            'reports:generate',
-
-            // People & team
-            'people:read',
-            'people:manage',
-            'project-team:manage',
-        ];
-
-        foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
-        }
-
-        $matrix = [
-            'executive' => [
+    public function permissions(): array
+    {
+        return match ($this) {
+            self::Executive => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read', 'boundaries:approve-reject',
@@ -97,7 +37,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'reports:read',
                 'people:read',
             ],
-            'senior_user' => [
+            self::SeniorUser => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read', 'boundaries:approve-reject',
@@ -111,7 +51,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'reports:read',
                 'people:read',
             ],
-            'senior_supplier' => [
+            self::SeniorSupplier => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read', 'boundaries:approve-reject',
@@ -125,7 +65,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'reports:read',
                 'people:read',
             ],
-            'project_manager' => [
+            self::ProjectManager => [
                 'projects:read', 'projects:create', 'projects:update', 'projects:delete',
                 'stages:read', 'stages:manage', 'stages:transition',
                 'boundaries:read', 'boundaries:manage', 'boundaries:submit',
@@ -141,7 +81,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'people:read', 'people:manage',
                 'project-team:manage',
             ],
-            'project_assurance' => [
+            self::ProjectAssurance => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read',
@@ -156,7 +96,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'reports:read',
                 'people:read',
             ],
-            'project_support' => [
+            self::ProjectSupport => [
                 'projects:read', 'projects:update',
                 'stages:read', 'stages:manage',
                 'boundaries:read', 'boundaries:manage',
@@ -172,7 +112,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'people:read', 'people:manage',
                 'project-team:manage',
             ],
-            'change_authority' => [
+            self::ChangeAuthority => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read',
@@ -186,7 +126,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'reports:read',
                 'people:read',
             ],
-            'team_manager' => [
+            self::TeamManager => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read',
@@ -200,7 +140,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'reports:read',
                 'people:read',
             ],
-            'team_member' => [
+            self::TeamMember => [
                 'projects:read',
                 'stages:read',
                 'issue-log:read', 'issue-log:create',
@@ -209,7 +149,7 @@ class RoleAndPermissionSeeder extends Seeder
                 'plans:read',
                 'tasks:read', 'tasks:update-own',
             ],
-            'observer' => [
+            self::Observer => [
                 'projects:read',
                 'stages:read',
                 'boundaries:read',
@@ -221,11 +161,6 @@ class RoleAndPermissionSeeder extends Seeder
                 'plans:read',
                 'reports:read',
             ],
-        ];
-
-        foreach ($matrix as $roleName => $rolePermissions) {
-            $role = Role::firstOrCreate(['name' => $roleName]);
-            $role->syncPermissions($rolePermissions);
-        }
+        };
     }
 }
