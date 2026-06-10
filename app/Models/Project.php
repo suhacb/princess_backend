@@ -62,6 +62,36 @@ class Project extends Model
         return $this->hasMany(ProjectMember::class);
     }
 
+    public function dailyLogEntries(): HasMany
+    {
+        return $this->hasMany(DailyLogEntry::class);
+    }
+
+    public function issues(): HasMany
+    {
+        return $this->hasMany(Issue::class);
+    }
+
+    public function risks(): HasMany
+    {
+        return $this->hasMany(Risk::class);
+    }
+
+    public function changes(): HasMany
+    {
+        return $this->hasMany(Change::class);
+    }
+
+    public function qualityRegisterEntries(): HasMany
+    {
+        return $this->hasMany(QualityRegisterEntry::class);
+    }
+
+    public function lessons(): HasMany
+    {
+        return $this->hasMany(Lesson::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');
