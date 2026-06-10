@@ -6,8 +6,11 @@ use App\Models\Change;
 use App\Models\DailyLogEntry;
 use App\Models\Issue;
 use App\Models\Lesson;
+use App\Models\Product;
+use App\Models\ProductDependency;
 use App\Models\Project;
 use App\Models\ProjectMember;
+use App\Models\ProjectProductDescription;
 use App\Models\QualityRegisterEntry;
 use App\Models\Risk;
 use App\Models\Stage;
@@ -16,8 +19,11 @@ use App\Policies\ChangePolicy;
 use App\Policies\DailyLogEntryPolicy;
 use App\Policies\IssuePolicy;
 use App\Policies\LessonPolicy;
+use App\Policies\ProductFlowPolicy;
+use App\Policies\ProductPolicy;
 use App\Policies\ProjectMemberPolicy;
 use App\Policies\ProjectPolicy;
+use App\Policies\ProjectProductDescriptionPolicy;
 use App\Policies\QualityRegisterEntryPolicy;
 use App\Policies\RiskPolicy;
 use App\Policies\StageBoundaryPolicy;
@@ -44,6 +50,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Change::class, ChangePolicy::class);
         Gate::policy(QualityRegisterEntry::class, QualityRegisterEntryPolicy::class);
         Gate::policy(Lesson::class, LessonPolicy::class);
+        Gate::policy(ProjectProductDescription::class, ProjectProductDescriptionPolicy::class);
+        Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(ProductDependency::class, ProductFlowPolicy::class);
 
         Scramble::extendOpenApi(function (OpenApi $openApi) {
             $openApi->secure(SecurityScheme::http('bearer', 'JWT'));

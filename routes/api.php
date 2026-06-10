@@ -6,8 +6,11 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\IssueLogController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductFlowController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
+use App\Http\Controllers\ProjectProductDescriptionController;
 use App\Http\Controllers\QualityRegisterController;
 use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StageBoundaryController;
@@ -61,4 +64,27 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects.quality-register', QualityRegisterController::class)->parameters(['quality-register' => 'qualityRegisterEntry']);
 
     Route::apiResource('projects.lessons', LessonController::class);
+
+    Route::get('projects/{project}/product-description', [ProjectProductDescriptionController::class, 'show'])
+        ->name('projects.product-description.show');
+    Route::post('projects/{project}/product-description', [ProjectProductDescriptionController::class, 'store'])
+        ->name('projects.product-description.store');
+    Route::put('projects/{project}/product-description', [ProjectProductDescriptionController::class, 'update'])
+        ->name('projects.product-description.update');
+    Route::delete('projects/{project}/product-description', [ProjectProductDescriptionController::class, 'destroy'])
+        ->name('projects.product-description.destroy');
+
+    Route::get('projects/{project}/products/tree', [ProductController::class, 'tree'])
+        ->name('projects.products.tree');
+    Route::apiResource('projects.products', ProductController::class);
+    Route::post('projects/{project}/products/{product}/baseline', [ProductController::class, 'baseline'])
+        ->name('projects.products.baseline');
+
+    Route::get('projects/{project}/product-flow', [ProductFlowController::class, 'show'])
+        ->name('projects.product-flow.show');
+    Route::post('projects/{project}/product-flow', [ProductFlowController::class, 'store'])
+        ->name('projects.product-flow.store');
+    Route::delete('projects/{project}/product-flow/{dependency}', [ProductFlowController::class, 'destroy'])
+        ->name('projects.product-flow.destroy')
+        ->withoutScopedBindings();
 });
