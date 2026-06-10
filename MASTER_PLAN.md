@@ -37,8 +37,8 @@ Core project entity with stages and tolerances; all seven PRINCE2 themes and all
 ### Phase 5 — Logs & Registers
 Daily Log, Issue Log (with escalation), Risk Log (probability/impact), Change Log, Quality Register, Lessons Log — all fully audited.
 
-### Phase 6 — Planning & Task Tracking
-WBS, stage plans, task assignments, M365 calendar sync (meeting detection → expected minutes), full audit trail on every entity.
+### Phase 6 — Product-based Planning
+PRINCE2 product-based planning artefacts: Project Product Description, Product Descriptions, Product Breakdown Structure (PBS via parent hierarchy), Product Flow Diagram (dependency graph), Stage Plans, Team Plans, Exception Plans, and Work Packages (PM → Team Manager authorisation).
 
 ### Phase 7 — Quality Assurance Module
 Requirements (functional, non-functional, constraints), acceptance criteria, test scenarios, test session records, traceability matrix.
