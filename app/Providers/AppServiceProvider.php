@@ -6,6 +6,7 @@ use App\Models\Change;
 use App\Models\DailyLogEntry;
 use App\Models\Issue;
 use App\Models\Lesson;
+use App\Models\Plan;
 use App\Models\Product;
 use App\Models\ProductDependency;
 use App\Models\Project;
@@ -15,10 +16,12 @@ use App\Models\QualityRegisterEntry;
 use App\Models\Risk;
 use App\Models\Stage;
 use App\Models\StageBoundary;
+use App\Models\WorkPackage;
 use App\Policies\ChangePolicy;
 use App\Policies\DailyLogEntryPolicy;
 use App\Policies\IssuePolicy;
 use App\Policies\LessonPolicy;
+use App\Policies\PlanPolicy;
 use App\Policies\ProductFlowPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\ProjectMemberPolicy;
@@ -28,6 +31,7 @@ use App\Policies\QualityRegisterEntryPolicy;
 use App\Policies\RiskPolicy;
 use App\Policies\StageBoundaryPolicy;
 use App\Policies\StagePolicy;
+use App\Policies\WorkPackagePolicy;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -53,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ProjectProductDescription::class, ProjectProductDescriptionPolicy::class);
         Gate::policy(Product::class, ProductPolicy::class);
         Gate::policy(ProductDependency::class, ProductFlowPolicy::class);
+        Gate::policy(Plan::class, PlanPolicy::class);
+        Gate::policy(WorkPackage::class, WorkPackagePolicy::class);
 
         Scramble::extendOpenApi(function (OpenApi $openApi) {
             $openApi->secure(SecurityScheme::http('bearer', 'JWT'));

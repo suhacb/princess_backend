@@ -2,30 +2,25 @@
 
 namespace App\Models;
 
-use App\Enums\StageStatus;
-use App\Enums\StageType;
+use App\Enums\PlanStatus;
+use App\Enums\PlanType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Stage extends Model
+class Plan extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $attributes = [
-        'status'  => 'planned',
-        'version' => 1,
-    ];
-
     protected $fillable = [
         'project_id',
-        'name',
         'type',
-        'sequence',
+        'name',
         'description',
-        'status',
+        'stage_id',
+        'replaces_plan_id',
         'planned_start',
         'planned_end',
         'actual_start',
@@ -33,21 +28,27 @@ class Stage extends Model
         'tolerance_time',
         'tolerance_cost',
         'tolerance_scope',
-        'tolerance_risk',
         'tolerance_quality',
-        'tolerance_benefit',
-        'version',
+        'tolerance_risk',
+        'tolerance_benefits',
+        'assumptions',
+        'external_dependencies',
+        'monitoring_and_reporting',
+        'status',
+        'approved_by',
+        'approved_at',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'type'          => StageType::class,
-        'status'        => StageStatus::class,
+        'type'          => PlanType::class,
+        'status'        => PlanStatus::class,
         'planned_start' => 'date',
         'planned_end'   => 'date',
         'actual_start'  => 'date',
         'actual_end'    => 'date',
+        'approved_at'   => 'datetime',
     ];
 
     public function project(): BelongsTo
@@ -55,14 +56,24 @@ class Stage extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function boundaries(): HasMany
+    public function stage(): BelongsTo
     {
-        return $this->hasMany(StageBoundary::class);
+        return $this->belongsTo(Stage::class);
     }
 
-    public function plans(): HasMany
+    public function replaces(): BelongsTo
     {
-        return $this->hasMany(Plan::class);
+        return $this->belongsTo(Plan::class, 'replaces_plan_id');
+    }
+
+    public function workPackages(): HasMany
+    {
+        return $this->hasMany(WorkPackage::class);
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(Person::class, 'approved_by');
     }
 
     public function createdBy(): BelongsTo
@@ -73,5 +84,10 @@ class Stage extends Model
     public function updatedBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'updated_by');
+    }
+
+    public function isDeletable(): bool
+    {
+        return $this->status === PlanStatus::Draft;
     }
 }
