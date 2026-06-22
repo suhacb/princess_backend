@@ -158,6 +158,11 @@ class Project extends Model
         return $this->hasMany(HighlightReport::class);
     }
 
+    public function exceptionReports(): HasMany
+    {
+        return $this->hasMany(ExceptionReport::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');
