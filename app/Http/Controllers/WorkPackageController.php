@@ -117,7 +117,7 @@ class WorkPackageController extends Controller
      * @response {"data": {"id": 1, "status": "authorized"}}
      * @response 409 {"message": "Work package is not in draft status."}
      */
-    public function authorize(Project $project, WorkPackage $workPackage): WorkPackageResource
+    public function issue(Project $project, WorkPackage $workPackage): WorkPackageResource
     {
         $this->authorize('authorize', [WorkPackage::class, $project, $workPackage]);
 

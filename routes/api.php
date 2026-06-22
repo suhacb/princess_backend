@@ -95,7 +95,7 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.plans.approve');
 
     Route::apiResource('projects.work-packages', WorkPackageController::class);
-    Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'authorize'])
+    Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])
         ->name('projects.work-packages.authorize');
     Route::post('projects/{project}/work-packages/{workPackage}/accept', [WorkPackageController::class, 'accept'])
         ->name('projects.work-packages.accept');

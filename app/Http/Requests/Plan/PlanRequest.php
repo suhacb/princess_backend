@@ -45,7 +45,7 @@ class PlanRequest extends DynamicRequest
             'description'             => ['nullable', 'string'],
             'stage_id'                => ['nullable', Rule::exists('stages', 'id')],
             'planned_start'           => ['sometimes', 'required', 'date'],
-            'planned_end'             => ['sometimes', 'required', 'date'],
+            'planned_end'             => ['sometimes', 'required', 'date', 'after_or_equal:planned_start'],
             'tolerance_time'          => ['nullable', 'string', 'max:100'],
             'tolerance_cost'          => ['nullable', 'string', 'max:100'],
             'tolerance_scope'         => ['nullable', 'string'],

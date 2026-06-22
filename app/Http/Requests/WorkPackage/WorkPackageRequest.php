@@ -53,7 +53,7 @@ class WorkPackageRequest extends DynamicRequest
             'tolerance_risk'                        => ['nullable', 'string'],
             'tolerance_benefits'                    => ['nullable', 'string'],
             'planned_start'                         => ['sometimes', 'required', 'date'],
-            'planned_end'                           => ['sometimes', 'required', 'date'],
+            'planned_end'                           => ['sometimes', 'required', 'date', 'after_or_equal:planned_start'],
             'product_ids'                           => ['nullable', 'array'],
             'product_ids.*'                         => ['integer', Rule::exists('products', 'id')],
         ];
