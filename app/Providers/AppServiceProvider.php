@@ -19,6 +19,8 @@ use App\Models\Requirement;
 use App\Models\Risk;
 use App\Models\Stage;
 use App\Models\StageBoundary;
+use App\Models\TestCase;
+use App\Models\TestScenario;
 use App\Models\WorkPackage;
 use App\Policies\AcceptanceCriterionPolicy;
 use App\Policies\ChangePolicy;
@@ -34,6 +36,8 @@ use App\Policies\ProjectProductDescriptionPolicy;
 use App\Policies\QaDocumentPolicy;
 use App\Policies\QualityRegisterEntryPolicy;
 use App\Policies\RequirementPolicy;
+use App\Policies\TestCasePolicy;
+use App\Policies\TestScenarioPolicy;
 use App\Policies\RiskPolicy;
 use App\Policies\StageBoundaryPolicy;
 use App\Policies\StagePolicy;
@@ -68,6 +72,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Requirement::class, RequirementPolicy::class);
         Gate::policy(AcceptanceCriterion::class, AcceptanceCriterionPolicy::class);
         Gate::policy(QaDocument::class, QaDocumentPolicy::class);
+        Gate::policy(TestScenario::class, TestScenarioPolicy::class);
+        Gate::policy(TestCase::class, TestCasePolicy::class);
 
         Scramble::extendOpenApi(function (OpenApi $openApi) {
             $openApi->secure(SecurityScheme::http('bearer', 'JWT'));

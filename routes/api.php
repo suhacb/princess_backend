@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AcceptanceCriterionController;
+use App\Http\Controllers\TestCaseController;
+use App\Http\Controllers\TestScenarioController;
 use App\Http\Controllers\ChangeLogController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\HealthController;
@@ -120,6 +122,24 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.qa-documents.reject');
     Route::post('projects/{project}/qa-documents/{qaDocument}/confirm', [QaDocumentController::class, 'confirm'])
         ->name('projects.qa-documents.confirm');
+
+    Route::apiResource('projects.test-scenarios', TestScenarioController::class)
+        ->parameters(['test-scenarios' => 'testScenario']);
+    Route::post('projects/{project}/test-scenarios/{testScenario}/ready', [TestScenarioController::class, 'ready'])
+        ->name('projects.test-scenarios.ready');
+    Route::post('projects/{project}/test-scenarios/{testScenario}/obsolete', [TestScenarioController::class, 'obsolete'])
+        ->name('projects.test-scenarios.obsolete');
+    Route::post('projects/{project}/test-scenarios/{testScenario}/reopen', [TestScenarioController::class, 'reopen'])
+        ->name('projects.test-scenarios.reopen');
+    Route::post('projects/{project}/test-scenarios/{testScenario}/mark-testable', [TestScenarioController::class, 'markTestable'])
+        ->name('projects.test-scenarios.mark-testable');
+    Route::post('projects/{project}/test-scenarios/{testScenario}/mark-not-testable', [TestScenarioController::class, 'markNotTestable'])
+        ->name('projects.test-scenarios.mark-not-testable');
+    Route::get('projects/{project}/test-scenarios/{testScenario}/document', [TestScenarioController::class, 'document'])
+        ->name('projects.test-scenarios.document');
+
+    Route::apiResource('projects.test-scenarios.test-cases', TestCaseController::class)
+        ->parameters(['test-cases' => 'testCase']);
 
     Route::apiResource('projects.work-packages', WorkPackageController::class);
     Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])
