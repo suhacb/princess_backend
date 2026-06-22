@@ -153,6 +153,11 @@ class Project extends Model
         return $this->hasMany(CheckpointReport::class);
     }
 
+    public function highlightReports(): HasMany
+    {
+        return $this->hasMany(HighlightReport::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');

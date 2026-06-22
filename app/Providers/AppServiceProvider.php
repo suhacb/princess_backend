@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Change;
 use App\Models\CheckpointReport;
 use App\Models\DailyLogEntry;
+use App\Models\HighlightReport;
 use App\Models\Issue;
 use App\Models\Lesson;
 use App\Models\AcceptanceCriterion;
@@ -28,6 +29,7 @@ use App\Models\WorkPackage;
 use App\Policies\AcceptanceCriterionPolicy;
 use App\Policies\ChangePolicy;
 use App\Policies\CheckpointReportPolicy;
+use App\Policies\HighlightReportPolicy;
 use App\Policies\DailyLogEntryPolicy;
 use App\Policies\IssuePolicy;
 use App\Policies\LessonPolicy;
@@ -83,6 +85,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(TestSessionPlan::class, TestSessionPlanPolicy::class);
         Gate::policy(TestSession::class, TestSessionPolicy::class);
         Gate::policy(CheckpointReport::class, CheckpointReportPolicy::class);
+        Gate::policy(HighlightReport::class, HighlightReportPolicy::class);
 
         Scramble::extendOpenApi(function (OpenApi $openApi) {
             $openApi->secure(SecurityScheme::http('bearer', 'JWT'));

@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AcceptanceCriterionController;
 use App\Http\Controllers\CheckpointReportController;
+use App\Http\Controllers\HighlightReportController;
 use App\Http\Controllers\PeriodSummaryController;
+use App\Http\Controllers\VarianceController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestScenarioController;
 use App\Http\Controllers\TestSessionController;
@@ -183,6 +185,18 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
 
     Route::get('projects/{project}/period-summary', [PeriodSummaryController::class, 'index'])
         ->name('projects.period-summary');
+
+    Route::apiResource('projects.highlight-reports', HighlightReportController::class)
+        ->parameters(['highlight-reports' => 'highlightReport']);
+    Route::post('projects/{project}/highlight-reports/{highlightReport}/submit', [HighlightReportController::class, 'submit'])
+        ->name('projects.highlight-reports.submit');
+    Route::post('projects/{project}/highlight-reports/{highlightReport}/approve', [HighlightReportController::class, 'approve'])
+        ->name('projects.highlight-reports.approve');
+
+    Route::get('projects/{project}/variance', [VarianceController::class, 'index'])
+        ->name('projects.variance');
+    Route::get('projects/{project}/stages/{stage}/variance', [VarianceController::class, 'show'])
+        ->name('projects.stages.variance');
 
     Route::apiResource('projects.work-packages', WorkPackageController::class);
     Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])
