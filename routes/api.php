@@ -6,8 +6,10 @@ use App\Http\Controllers\HealthController;
 use App\Http\Controllers\IssueLogController;
 use App\Http\Controllers\LessonController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductFlowController;
+use App\Http\Controllers\WorkPackageController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
 use App\Http\Controllers\ProjectProductDescriptionController;
@@ -87,4 +89,18 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::delete('projects/{project}/product-flow/{dependency}', [ProductFlowController::class, 'destroy'])
         ->name('projects.product-flow.destroy')
         ->withoutScopedBindings();
+
+    Route::apiResource('projects.plans', PlanController::class);
+    Route::post('projects/{project}/plans/{plan}/approve', [PlanController::class, 'approve'])
+        ->name('projects.plans.approve');
+
+    Route::apiResource('projects.work-packages', WorkPackageController::class);
+    Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])
+        ->name('projects.work-packages.authorize');
+    Route::post('projects/{project}/work-packages/{workPackage}/accept', [WorkPackageController::class, 'accept'])
+        ->name('projects.work-packages.accept');
+    Route::post('projects/{project}/work-packages/{workPackage}/complete', [WorkPackageController::class, 'complete'])
+        ->name('projects.work-packages.complete');
+    Route::post('projects/{project}/work-packages/{workPackage}/cancel', [WorkPackageController::class, 'cancel'])
+        ->name('projects.work-packages.cancel');
 });

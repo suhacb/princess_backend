@@ -103,6 +103,16 @@ class Project extends Model
         return $this->hasMany(Product::class);
     }
 
+    public function plans(): HasMany
+    {
+        return $this->hasMany(Plan::class);
+    }
+
+    public function workPackages(): HasMany
+    {
+        return $this->hasMany(WorkPackage::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');
