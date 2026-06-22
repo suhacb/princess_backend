@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AcceptanceCriterionController;
 use App\Http\Controllers\CheckpointReportController;
+use App\Http\Controllers\ExceptionReportController;
 use App\Http\Controllers\HighlightReportController;
 use App\Http\Controllers\PeriodSummaryController;
 use App\Http\Controllers\VarianceController;
@@ -198,6 +199,13 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::get('projects/{project}/stages/{stage}/variance', [VarianceController::class, 'show'])
         ->name('projects.stages.variance');
 
+    Route::apiResource('projects.exception-reports', ExceptionReportController::class)
+        ->parameters(['exception-reports' => 'exceptionReport']);
+    Route::post('projects/{project}/exception-reports/{exceptionReport}/submit', [ExceptionReportController::class, 'submit'])
+        ->name('projects.exception-reports.submit');
+    Route::post('projects/{project}/exception-reports/{exceptionReport}/close', [ExceptionReportController::class, 'close'])
+        ->name('projects.exception-reports.close');
+
     Route::apiResource('projects.work-packages', WorkPackageController::class);
     Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])
         ->name('projects.work-packages.authorize');
@@ -207,4 +215,6 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.work-packages.complete');
     Route::post('projects/{project}/work-packages/{workPackage}/cancel', [WorkPackageController::class, 'cancel'])
         ->name('projects.work-packages.cancel');
+    Route::post('projects/{project}/work-packages/{workPackage}/raise-exception', [ExceptionReportController::class, 'raiseException'])
+        ->name('projects.work-packages.raise-exception');
 });
