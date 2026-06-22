@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AcceptanceCriterionController;
 use App\Http\Controllers\ChangeLogController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\HealthController;
@@ -9,6 +10,8 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductFlowController;
+use App\Http\Controllers\QaDocumentController;
+use App\Http\Controllers\RequirementController;
 use App\Http\Controllers\WorkPackageController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
@@ -93,6 +96,30 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects.plans', PlanController::class);
     Route::post('projects/{project}/plans/{plan}/approve', [PlanController::class, 'approve'])
         ->name('projects.plans.approve');
+
+    Route::apiResource('projects.requirements', RequirementController::class);
+    Route::post('projects/{project}/requirements/{requirement}/review', [RequirementController::class, 'review'])
+        ->name('projects.requirements.review');
+    Route::post('projects/{project}/requirements/{requirement}/approve', [RequirementController::class, 'approve'])
+        ->name('projects.requirements.approve');
+    Route::post('projects/{project}/requirements/{requirement}/reject', [RequirementController::class, 'reject'])
+        ->name('projects.requirements.reject');
+    Route::post('projects/{project}/requirements/{requirement}/defer', [RequirementController::class, 'defer'])
+        ->name('projects.requirements.defer');
+
+    Route::apiResource('projects.acceptance-criteria', AcceptanceCriterionController::class)
+        ->parameters(['acceptance-criteria' => 'acceptanceCriterion']);
+    Route::post('projects/{project}/acceptance-criteria/{acceptanceCriterion}/approve', [AcceptanceCriterionController::class, 'approve'])
+        ->name('projects.acceptance-criteria.approve');
+
+    Route::apiResource('projects.qa-documents', QaDocumentController::class)
+        ->parameters(['qa-documents' => 'qaDocument']);
+    Route::post('projects/{project}/qa-documents/{qaDocument}/send-for-review', [QaDocumentController::class, 'sendForReview'])
+        ->name('projects.qa-documents.send-for-review');
+    Route::post('projects/{project}/qa-documents/{qaDocument}/reject', [QaDocumentController::class, 'reject'])
+        ->name('projects.qa-documents.reject');
+    Route::post('projects/{project}/qa-documents/{qaDocument}/confirm', [QaDocumentController::class, 'confirm'])
+        ->name('projects.qa-documents.confirm');
 
     Route::apiResource('projects.work-packages', WorkPackageController::class);
     Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])

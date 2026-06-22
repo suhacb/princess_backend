@@ -113,6 +113,21 @@ class Project extends Model
         return $this->hasMany(WorkPackage::class);
     }
 
+    public function requirements(): HasMany
+    {
+        return $this->hasMany(Requirement::class);
+    }
+
+    public function acceptanceCriteria(): HasMany
+    {
+        return $this->hasMany(AcceptanceCriterion::class);
+    }
+
+    public function qaDocuments(): HasMany
+    {
+        return $this->hasMany(QaDocument::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');
