@@ -128,6 +128,16 @@ class Project extends Model
         return $this->hasMany(QaDocument::class);
     }
 
+    public function testScenarios(): HasMany
+    {
+        return $this->hasMany(TestScenario::class);
+    }
+
+    public function testCases(): HasMany
+    {
+        return $this->hasMany(TestCase::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');

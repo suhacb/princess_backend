@@ -6,6 +6,7 @@ use App\Enums\AcceptanceCriterionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AcceptanceCriterion extends Model
@@ -66,9 +67,18 @@ class AcceptanceCriterion extends Model
         return $this->belongsTo(Person::class, 'updated_by');
     }
 
+    public function testScenarios(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            TestScenario::class,
+            'test_scenario_acceptance_criteria'
+        );
+    }
+
     public function isDeletable(): bool
     {
-        return $this->status === AcceptanceCriterionStatus::Draft;
+        return $this->status === AcceptanceCriterionStatus::Draft
+            && $this->testScenarios()->doesntExist();
     }
 
     public static function nextRef(int $projectId): string
