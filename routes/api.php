@@ -3,6 +3,9 @@
 use App\Http\Controllers\AcceptanceCriterionController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestScenarioController;
+use App\Http\Controllers\TestSessionController;
+use App\Http\Controllers\TestSessionPlanController;
+use App\Http\Controllers\TraceabilityController;
 use App\Http\Controllers\ChangeLogController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\HealthController;
@@ -140,6 +143,34 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
 
     Route::apiResource('projects.test-scenarios.test-cases', TestCaseController::class)
         ->parameters(['test-cases' => 'testCase']);
+
+    Route::apiResource('projects.test-session-plans', TestSessionPlanController::class)
+        ->parameters(['test-session-plans' => 'testSessionPlan']);
+    Route::post('projects/{project}/test-session-plans/{testSessionPlan}/activate', [TestSessionPlanController::class, 'activate'])
+        ->name('projects.test-session-plans.activate');
+    Route::post('projects/{project}/test-session-plans/{testSessionPlan}/complete', [TestSessionPlanController::class, 'complete'])
+        ->name('projects.test-session-plans.complete');
+    Route::post('projects/{project}/test-session-plans/{testSessionPlan}/cancel', [TestSessionPlanController::class, 'cancel'])
+        ->name('projects.test-session-plans.cancel');
+    Route::get('projects/{project}/test-session-plans/{testSessionPlan}/document', [TestSessionPlanController::class, 'document'])
+        ->name('projects.test-session-plans.document');
+
+    Route::apiResource('projects.test-sessions', TestSessionController::class)
+        ->parameters(['test-sessions' => 'testSession']);
+    Route::post('projects/{project}/test-sessions/{testSession}/start', [TestSessionController::class, 'start'])
+        ->name('projects.test-sessions.start');
+    Route::post('projects/{project}/test-sessions/{testSession}/complete', [TestSessionController::class, 'complete'])
+        ->name('projects.test-sessions.complete');
+    Route::post('projects/{project}/test-sessions/{testSession}/cancel', [TestSessionController::class, 'cancel'])
+        ->name('projects.test-sessions.cancel');
+    Route::put('projects/{project}/test-sessions/{testSession}/results/{testScenario}', [TestSessionController::class, 'updateResult'])
+        ->name('projects.test-sessions.results.update')
+        ->withoutScopedBindings();
+    Route::get('projects/{project}/test-sessions/{testSession}/report', [TestSessionController::class, 'report'])
+        ->name('projects.test-sessions.report');
+
+    Route::get('projects/{project}/traceability', [TraceabilityController::class, 'index'])
+        ->name('projects.traceability');
 
     Route::apiResource('projects.work-packages', WorkPackageController::class);
     Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])

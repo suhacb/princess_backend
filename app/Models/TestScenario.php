@@ -4,13 +4,13 @@ namespace App\Models;
 
 use App\Enums\TestScenarioStatus;
 use App\Enums\TestScenarioType;
+use App\Enums\TestSessionStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Schema;
 
 class TestScenario extends Model
 {
@@ -64,17 +64,32 @@ class TestScenario extends Model
         return $this->belongsTo(Person::class, 'updated_by');
     }
 
+    public function testSessionResults(): HasMany
+    {
+        return $this->hasMany(TestSessionResult::class);
+    }
+
+    public function latestResultForTeam(string $teamType): ?string
+    {
+        // Use DB::table to bypass Eloquent model casting and return the raw string value
+        return \Illuminate\Support\Facades\DB::table('test_session_results')
+            ->join('test_sessions', 'test_session_results.test_session_id', '=', 'test_sessions.id')
+            ->where('test_session_results.test_scenario_id', $this->id)
+            ->where('test_sessions.team_type', $teamType)
+            ->where('test_sessions.status', TestSessionStatus::Completed->value)
+            ->orderByDesc('test_sessions.session_date')
+            ->orderByDesc('test_sessions.id')
+            ->value('test_session_results.result');
+    }
+
     public function isDeletable(): bool
     {
         if ($this->status !== TestScenarioStatus::Draft) {
             return false;
         }
 
-        // Check for test session results once B3 is deployed
-        if (Schema::hasTable('test_session_results')) {
-            if ($this->testSessionResults()->exists()) {
-                return false;
-            }
+        if ($this->testSessionResults()->exists()) {
+            return false;
         }
 
         return true;
