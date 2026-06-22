@@ -36,7 +36,7 @@ enum ProjectRole: string
                 'plans:read',
                 'qa:read',
                 'tasks:read',
-                'reports:read',
+                'reports:read', 'reports:approve',
                 'people:read',
             ],
             self::SeniorUser => [
@@ -52,7 +52,7 @@ enum ProjectRole: string
                 'plans:read',
                 'qa:read',
                 'tasks:read',
-                'reports:read',
+                'reports:read', 'reports:approve',
                 'people:read',
             ],
             self::SeniorSupplier => [
@@ -68,7 +68,7 @@ enum ProjectRole: string
                 'plans:read',
                 'qa:read',
                 'tasks:read',
-                'reports:read',
+                'reports:read', 'reports:approve',
                 'people:read',
             ],
             self::ProjectManager => [

@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AcceptanceCriterionController;
+use App\Http\Controllers\CheckpointReportController;
+use App\Http\Controllers\PeriodSummaryController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestScenarioController;
 use App\Http\Controllers\TestSessionController;
@@ -171,6 +173,16 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
 
     Route::get('projects/{project}/traceability', [TraceabilityController::class, 'index'])
         ->name('projects.traceability');
+
+    Route::apiResource('projects.checkpoint-reports', CheckpointReportController::class)
+        ->parameters(['checkpoint-reports' => 'checkpointReport']);
+    Route::post('projects/{project}/checkpoint-reports/{checkpointReport}/submit', [CheckpointReportController::class, 'submit'])
+        ->name('projects.checkpoint-reports.submit');
+    Route::post('projects/{project}/checkpoint-reports/{checkpointReport}/acknowledge', [CheckpointReportController::class, 'acknowledge'])
+        ->name('projects.checkpoint-reports.acknowledge');
+
+    Route::get('projects/{project}/period-summary', [PeriodSummaryController::class, 'index'])
+        ->name('projects.period-summary');
 
     Route::apiResource('projects.work-packages', WorkPackageController::class);
     Route::post('projects/{project}/work-packages/{workPackage}/authorize', [WorkPackageController::class, 'issue'])
