@@ -138,6 +138,16 @@ class Project extends Model
         return $this->hasMany(TestCase::class);
     }
 
+    public function testSessionPlans(): HasMany
+    {
+        return $this->hasMany(TestSessionPlan::class);
+    }
+
+    public function testSessions(): HasMany
+    {
+        return $this->hasMany(TestSession::class);
+    }
+
     public function createdBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'created_by');
