@@ -1,0 +1,530 @@
+<?php
+
+namespace Tests\Feature\Projects;
+
+use App\Enums\ProjectRole;
+use App\Enums\QaDocumentStatus;
+use App\Enums\QaDocumentType;
+use App\Enums\RequirementStatus;
+use App\Models\Person;
+use App\Models\Project;
+use App\Models\QaDocument;
+use App\Models\Requirement;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class QaDocumentControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $user;
+    private Person $person;
+    private Project $project;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
+
+        $this->person = Person::factory()->create();
+        $this->user   = User::factory()->create(['person_id' => $this->person->id]);
+        $this->actingAs($this->user);
+
+        $this->project = Project::factory()->create(['created_by' => $this->person->id]);
+        $this->project->members()->create([
+            'person_id' => $this->person->id,
+            'role'      => ProjectRole::ProjectManager->value,
+        ]);
+    }
+
+    private function indexUrl(): string
+    {
+        return "/api/projects/{$this->project->id}/qa-documents";
+    }
+
+    private function documentUrl(QaDocument $doc): string
+    {
+        return "/api/projects/{$this->project->id}/qa-documents/{$doc->id}";
+    }
+
+    private function makeDocument(array $attributes = []): QaDocument
+    {
+        return QaDocument::factory()->create(array_merge([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ], $attributes));
+    }
+
+    private function storePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'type'  => QaDocumentType::RequirementsSpecification->value,
+            'title' => 'System Requirements v1.0',
+        ], $overrides);
+    }
+
+    private function assurancePerson(): array
+    {
+        $person = Person::factory()->create();
+        $user   = User::factory()->create(['person_id' => $person->id]);
+        $this->project->members()->create(['person_id' => $person->id, 'role' => ProjectRole::ProjectAssurance->value]);
+
+        return [$person, $user];
+    }
+
+    // -------------------------------------------------------------------------
+    // index
+    // -------------------------------------------------------------------------
+
+    public function test_index_lists_qa_documents(): void
+    {
+        $this->makeDocument();
+        $this->makeDocument(['type' => QaDocumentType::TestSpecification->value]);
+
+        $this->getJson($this->indexUrl())
+            ->assertOk()
+            ->assertJsonCount(2, 'data');
+    }
+
+    public function test_index_filters_by_type(): void
+    {
+        $this->makeDocument(['type' => QaDocumentType::RequirementsSpecification->value]);
+        $this->makeDocument(['type' => QaDocumentType::TestSpecification->value]);
+
+        $this->getJson($this->indexUrl() . '?type=test_specification')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.type', QaDocumentType::TestSpecification->value);
+    }
+
+    public function test_index_filters_by_status(): void
+    {
+        $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
+        $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->getJson($this->indexUrl() . '?status=in_review')
+            ->assertOk()
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_index_forbidden_for_non_member(): void
+    {
+        $stranger = User::factory()->create(['person_id' => Person::factory()->create()->id]);
+
+        $this->actingAs($stranger)
+            ->getJson($this->indexUrl())
+            ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // store
+    // -------------------------------------------------------------------------
+
+    public function test_store_creates_qa_document(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload())
+            ->assertCreated()
+            ->assertJsonPath('data.type', QaDocumentType::RequirementsSpecification->value)
+            ->assertJsonPath('data.status', QaDocumentStatus::Draft->value)
+            ->assertJsonPath('data.title', 'System Requirements v1.0');
+
+        $this->assertDatabaseHas('qa_documents', [
+            'project_id' => $this->project->id,
+            'type'       => QaDocumentType::RequirementsSpecification->value,
+            'status'     => QaDocumentStatus::Draft->value,
+            'created_by' => $this->person->id,
+        ]);
+    }
+
+    public function test_store_with_linked_requirements(): void
+    {
+        $req1 = Requirement::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+        $req2 = Requirement::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id, 'ref' => 'REQ-002']);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['requirement_ids' => [$req1->id, $req2->id]]))
+            ->assertCreated();
+
+        $document = QaDocument::first();
+        $this->assertCount(2, $document->requirements);
+    }
+
+    public function test_store_with_supersedes_link(): void
+    {
+        $old = $this->makeDocument(['status' => QaDocumentStatus::Confirmed->value]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['supersedes_id' => $old->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.supersedes_id', $old->id);
+    }
+
+    public function test_store_rejects_supersedes_if_not_confirmed(): void
+    {
+        $draft = $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['supersedes_id' => $draft->id]))
+            ->assertUnprocessable();
+    }
+
+    public function test_store_rejects_supersedes_from_another_project(): void
+    {
+        $other   = Project::factory()->create(['created_by' => $this->person->id]);
+        $foreign = QaDocument::factory()->confirmed()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['supersedes_id' => $foreign->id]))
+            ->assertUnprocessable();
+    }
+
+    public function test_store_rejects_requirement_ids_on_non_requirements_spec(): void
+    {
+        $req = Requirement::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+
+        $this->postJson($this->indexUrl(), [
+            'type'            => QaDocumentType::TestSpecification->value,
+            'title'           => 'Test spec',
+            'requirement_ids' => [$req->id],
+        ])->assertUnprocessable();
+    }
+
+    public function test_store_rejects_requirement_ids_from_another_project(): void
+    {
+        $other      = Project::factory()->create(['created_by' => $this->person->id]);
+        $foreignReq = Requirement::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['requirement_ids' => [$foreignReq->id]]))
+            ->assertUnprocessable();
+    }
+
+    // -------------------------------------------------------------------------
+    // store – validation
+    // -------------------------------------------------------------------------
+
+    public function test_store_requires_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['type' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_rejects_invalid_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['type' => 'bogus']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_requires_title(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_forbidden_for_read_only_role(): void
+    {
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->actingAs($observer)
+            ->postJson($this->indexUrl(), $this->storePayload())
+            ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // show
+    // -------------------------------------------------------------------------
+
+    public function test_show_returns_document(): void
+    {
+        $doc = $this->makeDocument();
+
+        $this->getJson($this->documentUrl($doc))
+            ->assertOk()
+            ->assertJsonPath('data.id', $doc->id);
+    }
+
+    public function test_show_forbidden_for_non_member(): void
+    {
+        $doc      = $this->makeDocument();
+        $stranger = User::factory()->create(['person_id' => Person::factory()->create()->id]);
+
+        $this->actingAs($stranger)
+            ->getJson($this->documentUrl($doc))
+            ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // update
+    // -------------------------------------------------------------------------
+
+    public function test_update_edits_draft_document(): void
+    {
+        $doc = $this->makeDocument(['title' => 'Original']);
+
+        $this->putJson($this->documentUrl($doc), ['title' => 'Updated'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Updated');
+    }
+
+    public function test_update_blocked_on_confirmed_document(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::Confirmed->value]);
+
+        $this->putJson($this->documentUrl($doc), ['title' => 'Trying to edit confirmed'])
+            ->assertUnprocessable();
+    }
+
+    public function test_update_forbidden_for_read_only_role(): void
+    {
+        $doc            = $this->makeDocument();
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->actingAs($observer)
+            ->putJson($this->documentUrl($doc), ['title' => 'Hijacked'])
+            ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // destroy
+    // -------------------------------------------------------------------------
+
+    public function test_destroy_deletes_draft_document(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
+
+        $this->deleteJson($this->documentUrl($doc))->assertNoContent();
+        $this->assertSoftDeleted('qa_documents', ['id' => $doc->id]);
+    }
+
+    public function test_destroy_forbidden_on_non_draft_document(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->deleteJson($this->documentUrl($doc))->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // sendForReview
+    // -------------------------------------------------------------------------
+
+    public function test_send_for_review_transitions_draft_to_in_review(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
+
+        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/send-for-review")
+            ->assertOk()
+            ->assertJsonPath('data.status', QaDocumentStatus::InReview->value);
+    }
+
+    public function test_send_for_review_returns_409_if_not_draft(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/send-for-review")
+            ->assertStatus(409);
+    }
+
+    public function test_send_for_review_forbidden_for_read_only_role(): void
+    {
+        $doc            = $this->makeDocument();
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->actingAs($observer)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/send-for-review")
+            ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // reject
+    // -------------------------------------------------------------------------
+
+    public function test_reject_transitions_in_review_to_draft(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/reject", [
+                'review_notes' => 'Needs more detail in section 3.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.status', QaDocumentStatus::Draft->value)
+            ->assertJsonPath('data.review_notes', 'Needs more detail in section 3.');
+    }
+
+    public function test_reject_requires_review_notes(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/reject", [])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('review_notes');
+    }
+
+    public function test_reject_returns_409_if_not_in_review(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/reject", [
+                'review_notes' => 'Not applicable',
+            ])
+            ->assertStatus(409);
+    }
+
+    // -------------------------------------------------------------------------
+    // confirm
+    // -------------------------------------------------------------------------
+
+    public function test_confirm_transitions_in_review_to_confirmed(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertOk()
+            ->assertJsonPath('data.status', QaDocumentStatus::Confirmed->value);
+
+        $this->assertDatabaseHas('qa_documents', [
+            'id'           => $doc->id,
+            'status'       => QaDocumentStatus::Confirmed->value,
+            'confirmed_by' => $assurancePerson->id,
+        ]);
+    }
+
+    public function test_confirm_allowed_for_board_and_pm(): void
+    {
+        foreach ([ProjectRole::Executive, ProjectRole::SeniorUser, ProjectRole::SeniorSupplier, ProjectRole::ProjectManager] as $role) {
+            $memberPerson = Person::factory()->create();
+            $memberUser   = User::factory()->create(['person_id' => $memberPerson->id]);
+            $this->project->members()->create(['person_id' => $memberPerson->id, 'role' => $role->value]);
+
+            $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+            $this->actingAs($memberUser)
+                ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+                ->assertOk("Role {$role->value} should be able to confirm");
+        }
+    }
+
+    public function test_confirm_returns_409_if_not_in_review(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertStatus(409);
+    }
+
+    public function test_confirm_cascades_reviewed_requirements_to_approved(): void
+    {
+        $req1 = Requirement::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+            'status'     => RequirementStatus::Reviewed->value,
+        ]);
+        $req2 = Requirement::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+            'ref'        => 'REQ-002',
+            'status'     => RequirementStatus::Draft->value,
+        ]);
+
+        $doc = $this->makeDocument([
+            'type'   => QaDocumentType::RequirementsSpecification->value,
+            'status' => QaDocumentStatus::InReview->value,
+        ]);
+        $doc->requirements()->sync([$req1->id, $req2->id]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertOk();
+
+        // Reviewed requirement gets approved
+        $this->assertDatabaseHas('requirements', [
+            'id'     => $req1->id,
+            'status' => RequirementStatus::Approved->value,
+        ]);
+        // Draft requirement stays draft
+        $this->assertDatabaseHas('requirements', [
+            'id'     => $req2->id,
+            'status' => RequirementStatus::Draft->value,
+        ]);
+    }
+
+    public function test_confirm_does_not_cascade_requirements_for_non_requirements_spec(): void
+    {
+        $req = Requirement::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+            'status'     => RequirementStatus::Reviewed->value,
+        ]);
+
+        $doc = $this->makeDocument([
+            'type'   => QaDocumentType::TestSpecification->value,
+            'status' => QaDocumentStatus::InReview->value,
+        ]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertOk();
+
+        // Requirement must NOT be touched — doc type is test_specification
+        $this->assertDatabaseHas('requirements', [
+            'id'     => $req->id,
+            'status' => RequirementStatus::Reviewed->value,
+        ]);
+    }
+
+    public function test_confirm_marks_superseded_document_as_superseded(): void
+    {
+        $old = $this->makeDocument(['status' => QaDocumentStatus::Confirmed->value]);
+        $new = $this->makeDocument([
+            'status'       => QaDocumentStatus::InReview->value,
+            'supersedes_id' => $old->id,
+        ]);
+
+        [$assurancePerson, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$new->id}/confirm")
+            ->assertOk();
+
+        $this->assertDatabaseHas('qa_documents', [
+            'id'     => $old->id,
+            'status' => QaDocumentStatus::Superseded->value,
+        ]);
+    }
+
+    public function test_confirm_forbidden_for_observer(): void
+    {
+        $doc            = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->actingAs($observer)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertForbidden();
+    }
+}
