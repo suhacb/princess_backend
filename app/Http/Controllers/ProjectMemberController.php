@@ -10,6 +10,9 @@ use App\Models\ProjectMember;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Project Members
+ */
 class ProjectMemberController extends Controller
 {
     /**

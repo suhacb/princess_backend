@@ -14,8 +14,19 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @tags QA Documents
+ */
 class QaDocumentController extends Controller
 {
+    /**
+     * List QA documents for a project.
+     *
+     * @queryParam type string Filter by type (requirements_specification, test_plan, test_report). Example: test_plan
+     * @queryParam status string Filter by status (draft, in_review, confirmed, superseded). Example: confirmed
+     *
+     * @response {"data": [{"id": 1, "type": "test_plan", "status": "draft"}]}
+     */
     public function index(Request $request, Project $project): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [QaDocument::class, $project]);
@@ -32,6 +43,11 @@ class QaDocumentController extends Controller
         return QaDocumentResource::collection($query->get());
     }
 
+    /**
+     * Create a QA document.
+     *
+     * @response 201 {"data": {"id": 1, "type": "test_plan", "status": "draft"}}
+     */
     public function store(QaDocumentRequest $request, Project $project): QaDocumentResource
     {
         $this->authorize('create', [QaDocument::class, $project]);
@@ -57,6 +73,11 @@ class QaDocumentController extends Controller
         return new QaDocumentResource($document->load(['requirements']));
     }
 
+    /**
+     * Get a QA document with its linked requirements.
+     *
+     * @response {"data": {"id": 1, "type": "test_plan", "requirements": []}}
+     */
     public function show(Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('view', [QaDocument::class, $project, $qaDocument]);
@@ -64,6 +85,12 @@ class QaDocumentController extends Controller
         return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy']));
     }
 
+    /**
+     * Update a QA document (not allowed if confirmed).
+     *
+     * @response {"data": {"id": 1, "title": "Updated"}}
+     * @response 422 {"message": "A confirmed document cannot be edited."}
+     */
     public function update(QaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('update', [QaDocument::class, $project, $qaDocument]);
@@ -90,6 +117,11 @@ class QaDocumentController extends Controller
         return new QaDocumentResource($qaDocument->fresh()->load(['requirements']));
     }
 
+    /**
+     * Delete a QA document (soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, QaDocument $qaDocument): Response
     {
         $this->authorize('delete', [QaDocument::class, $project, $qaDocument]);
@@ -99,6 +131,12 @@ class QaDocumentController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Send a draft QA document for review.
+     *
+     * @response {"data": {"id": 1, "status": "in_review"}}
+     * @response 409 {"message": "Only draft documents can be sent for review."}
+     */
     public function sendForReview(QaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('sendForReview', [QaDocument::class, $project, $qaDocument]);
@@ -119,6 +157,12 @@ class QaDocumentController extends Controller
         return new QaDocumentResource($qaDocument->fresh());
     }
 
+    /**
+     * Reject a QA document under review (returns it to draft).
+     *
+     * @response {"data": {"id": 1, "status": "draft"}}
+     * @response 409 {"message": "Only documents in review can be rejected."}
+     */
     public function reject(QaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('reject', [QaDocument::class, $project, $qaDocument]);
@@ -137,6 +181,12 @@ class QaDocumentController extends Controller
         return new QaDocumentResource($qaDocument->fresh());
     }
 
+    /**
+     * Confirm a QA document under review. Also approves linked reviewed requirements for requirements_specification type.
+     *
+     * @response {"data": {"id": 1, "status": "confirmed"}}
+     * @response 409 {"message": "Only documents in review can be confirmed."}
+     */
     public function confirm(Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('confirm', [QaDocument::class, $project, $qaDocument]);

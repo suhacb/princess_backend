@@ -9,6 +9,9 @@ use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Product Flow
+ */
 class ProductFlowController extends Controller
 {
     /**

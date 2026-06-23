@@ -9,8 +9,16 @@ use App\Models\Requirement;
 use App\Models\TestScenario;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @tags Traceability
+ */
 class TraceabilityController extends Controller
 {
+    /**
+     * Return the full requirements traceability matrix: requirements → acceptance criteria → test scenarios → results.
+     *
+     * @response {"data": [{"id": 1, "ref": "REQ-001", "acceptance_criteria": [{"ref": "AC-001", "test_scenarios": []}]}]}
+     */
     public function index(Project $project): JsonResponse
     {
         $this->authorize('viewAny', [\App\Models\Requirement::class, $project]);

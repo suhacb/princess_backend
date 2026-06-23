@@ -10,6 +10,9 @@ use App\Models\Risk;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Risk Log
+ */
 class RiskController extends Controller
 {
     /**

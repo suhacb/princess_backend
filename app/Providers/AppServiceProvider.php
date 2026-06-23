@@ -52,9 +52,6 @@ use App\Policies\RiskPolicy;
 use App\Policies\StageBoundaryPolicy;
 use App\Policies\StagePolicy;
 use App\Policies\WorkPackagePolicy;
-use Dedoc\Scramble\Scramble;
-use Dedoc\Scramble\Support\Generator\OpenApi;
-use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -89,9 +86,5 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CheckpointReport::class, CheckpointReportPolicy::class);
         Gate::policy(HighlightReport::class, HighlightReportPolicy::class);
         Gate::policy(ExceptionReport::class, ExceptionReportPolicy::class);
-
-        Scramble::extendOpenApi(function (OpenApi $openApi) {
-            $openApi->secure(SecurityScheme::http('bearer', 'JWT'));
-        });
     }
 }

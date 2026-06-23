@@ -14,8 +14,20 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Exception Reports
+ */
 class ExceptionReportController extends Controller
 {
+    /**
+     * List exception reports for a project.
+     *
+     * @queryParam status string Filter by status (draft, submitted, closed). Example: submitted
+     * @queryParam stage_id integer Filter by stage ID. Example: 2
+     * @queryParam trigger_type string Filter by trigger type (tolerance_time, tolerance_cost, tolerance_scope, tolerance_quality, tolerance_risk, issue_escalation, manual). Example: tolerance_time
+     *
+     * @response {"data": [{"id": 1, "ref": "EXR-001", "status": "draft", "trigger_type": "tolerance_time"}]}
+     */
     public function index(Project $project): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [ExceptionReport::class, $project]);
@@ -37,6 +49,11 @@ class ExceptionReportController extends Controller
         return ExceptionReportResource::collection($query->latest()->get());
     }
 
+    /**
+     * Create an exception report.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "EXR-001", "status": "draft"}}
+     */
     public function store(ExceptionReportRequest $request, Project $project): ExceptionReportResource
     {
         $this->authorize('create', [ExceptionReport::class, $project]);
@@ -53,6 +70,11 @@ class ExceptionReportController extends Controller
         return new ExceptionReportResource($report->load(['submittedBy', 'decidedBy']));
     }
 
+    /**
+     * Get an exception report.
+     *
+     * @response {"data": {"id": 1, "ref": "EXR-001", "options": []}}
+     */
     public function show(Project $project, ExceptionReport $exceptionReport): ExceptionReportResource
     {
         $this->authorize('view', [ExceptionReport::class, $project, $exceptionReport]);
@@ -60,6 +82,12 @@ class ExceptionReportController extends Controller
         return new ExceptionReportResource($exceptionReport->load(['submittedBy', 'decidedBy']));
     }
 
+    /**
+     * Update an exception report (draft only).
+     *
+     * @response {"data": {"id": 1, "title": "Updated"}}
+     * @response 409 {"message": "Only draft reports can be edited."}
+     */
     public function update(ExceptionReportRequest $request, Project $project, ExceptionReport $exceptionReport): ExceptionReportResource
     {
         $this->authorize('update', [ExceptionReport::class, $project, $exceptionReport]);
@@ -76,6 +104,11 @@ class ExceptionReportController extends Controller
         return new ExceptionReportResource($exceptionReport->load(['submittedBy', 'decidedBy']));
     }
 
+    /**
+     * Delete an exception report (draft only, soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, ExceptionReport $exceptionReport): Response
     {
         $this->authorize('delete', [ExceptionReport::class, $project, $exceptionReport]);
@@ -85,6 +118,12 @@ class ExceptionReportController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Submit a draft exception report to the project board.
+     *
+     * @response {"data": {"id": 1, "status": "submitted"}}
+     * @response 409 {"message": "Only draft reports can be submitted."}
+     */
     public function submit(Project $project, ExceptionReport $exceptionReport): ExceptionReportResource
     {
         $this->authorize('submit', [ExceptionReport::class, $project, $exceptionReport]);
@@ -103,6 +142,13 @@ class ExceptionReportController extends Controller
         return new ExceptionReportResource($exceptionReport->load(['submittedBy', 'decidedBy']));
     }
 
+    /**
+     * Board closes a submitted exception report with a decision.
+     *
+     * @response {"data": {"id": 1, "status": "closed", "board_decision": "Approve exception plan."}}
+     * @response 409 {"message": "Only submitted reports can be closed."}
+     * @response 422 {"message": "The board decision field is required."}
+     */
     public function close(Request $request, Project $project, ExceptionReport $exceptionReport): ExceptionReportResource
     {
         $this->authorize('close', [ExceptionReport::class, $project, $exceptionReport]);
@@ -126,6 +172,11 @@ class ExceptionReportController extends Controller
         return new ExceptionReportResource($exceptionReport->load(['submittedBy', 'decidedBy']));
     }
 
+    /**
+     * Automatically create a draft exception report from a work package tolerance breach.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "EXR-001", "trigger_type": "tolerance_time", "status": "draft"}}
+     */
     public function raiseException(Project $project, WorkPackage $workPackage): ExceptionReportResource
     {
         $this->authorize('raiseException', [ExceptionReport::class, $project]);

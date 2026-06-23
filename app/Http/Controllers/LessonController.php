@@ -9,6 +9,9 @@ use App\Models\Project;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Lessons
+ */
 class LessonController extends Controller
 {
     /**

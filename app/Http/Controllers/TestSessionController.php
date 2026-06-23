@@ -18,8 +18,21 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * @tags Test Sessions
+ */
 class TestSessionController extends Controller
 {
+    /**
+     * List test sessions for a project.
+     *
+     * @queryParam team_type string Filter by team type (supplier, client). Example: supplier
+     * @queryParam status string Filter by status (planned, in_progress, completed, cancelled). Example: completed
+     * @queryParam tester_id integer Filter by tester person ID. Example: 5
+     * @queryParam test_session_plan_id integer Filter by plan ID. Example: 2
+     *
+     * @response {"data": [{"id": 1, "ref": "TS-001", "status": "planned"}]}
+     */
     public function index(Request $request, Project $project): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [TestSession::class, $project]);
@@ -42,6 +55,11 @@ class TestSessionController extends Controller
         return TestSessionResource::collection($query->get());
     }
 
+    /**
+     * Create a test session. Pre-populates results from the linked plan's scenarios.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "TS-001", "status": "planned", "results": []}}
+     */
     public function store(TestSessionRequest $request, Project $project): TestSessionResource
     {
         $this->authorize('create', [TestSession::class, $project]);
@@ -73,6 +91,11 @@ class TestSessionController extends Controller
         return new TestSessionResource($session->load(['results.testScenario', 'tester']));
     }
 
+    /**
+     * Get a test session with its results and linked scenarios.
+     *
+     * @response {"data": {"id": 1, "ref": "TS-001", "results": []}}
+     */
     public function show(Project $project, TestSession $testSession): TestSessionResource
     {
         $this->authorize('view', [TestSession::class, $project, $testSession]);
@@ -82,6 +105,11 @@ class TestSessionController extends Controller
         );
     }
 
+    /**
+     * Update a test session.
+     *
+     * @response {"data": {"id": 1, "title": "Updated"}}
+     */
     public function update(TestSessionRequest $request, Project $project, TestSession $testSession): TestSessionResource
     {
         $this->authorize('update', [TestSession::class, $project, $testSession]);
@@ -99,6 +127,11 @@ class TestSessionController extends Controller
         return new TestSessionResource($testSession->fresh()->load(['results.testScenario', 'tester']));
     }
 
+    /**
+     * Delete a test session (soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, TestSession $testSession): Response
     {
         $this->authorize('delete', [TestSession::class, $project, $testSession]);
@@ -108,6 +141,12 @@ class TestSessionController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Start a planned test session.
+     *
+     * @response {"data": {"id": 1, "status": "in_progress"}}
+     * @response 409 {"message": "Only planned sessions can be started."}
+     */
     public function start(Project $project, TestSession $testSession): TestSessionResource
     {
         $this->authorize('start', [TestSession::class, $project, $testSession]);
@@ -126,6 +165,12 @@ class TestSessionController extends Controller
         return new TestSessionResource($testSession->fresh());
     }
 
+    /**
+     * Complete an in-progress test session. Recomputes AC pass/fail statuses and raises issues for failures.
+     *
+     * @response {"data": {"id": 1, "status": "completed"}}
+     * @response 409 {"message": "Only in-progress sessions can be completed."}
+     */
     public function complete(Project $project, TestSession $testSession): TestSessionResource
     {
         $this->authorize('complete', [TestSession::class, $project, $testSession]);
@@ -149,6 +194,12 @@ class TestSessionController extends Controller
         return new TestSessionResource($testSession->fresh()->load(['results.testScenario']));
     }
 
+    /**
+     * Cancel a test session.
+     *
+     * @response {"data": {"id": 1, "status": "cancelled"}}
+     * @response 409 {"message": "Completed or already cancelled sessions cannot be cancelled."}
+     */
     public function cancel(Project $project, TestSession $testSession): TestSessionResource
     {
         $this->authorize('cancel', [TestSession::class, $project, $testSession]);
@@ -167,6 +218,12 @@ class TestSessionController extends Controller
         return new TestSessionResource($testSession->fresh());
     }
 
+    /**
+     * Record or update the result for a scenario within a test session.
+     *
+     * @response {"data": {"result": "pass", "executed_at": "2026-07-01T10:00:00Z"}}
+     * @response 422 {"message": "This scenario is not part of the session."}
+     */
     public function updateResult(TestSessionRequest $request, Project $project, TestSession $testSession, TestScenario $testScenario): TestSessionResultResource
     {
         $this->authorize('updateResult', [TestSession::class, $project, $testSession]);
@@ -184,6 +241,11 @@ class TestSessionController extends Controller
         return new TestSessionResultResource($result->fresh()->load('testScenario'));
     }
 
+    /**
+     * Export a test session report with pass/fail summary and per-scenario results.
+     *
+     * @response {"data": {"ref": "TS-001", "summary": {"pass": 10, "fail": 2, "blocked": 1, "not_run": 0}, "results": []}}
+     */
     public function report(Project $project, TestSession $testSession): JsonResponse
     {
         $this->authorize('view', [TestSession::class, $project, $testSession]);

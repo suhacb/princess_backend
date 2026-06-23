@@ -11,6 +11,9 @@ use App\Models\StageBoundary;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Stage Boundaries
+ */
 class StageBoundaryController extends Controller
 {
     /**

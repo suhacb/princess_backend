@@ -8,6 +8,9 @@ use App\Models\Project;
 use App\Models\ProjectProductDescription;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Product Description
+ */
 class ProjectProductDescriptionController extends Controller
 {
     /**

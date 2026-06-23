@@ -12,8 +12,21 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Acceptance Criteria
+ */
 class AcceptanceCriterionController extends Controller
 {
+    /**
+     * List acceptance criteria for a project.
+     *
+     * @queryParam requirement_id integer Filter by requirement ID. Example: 3
+     * @queryParam status string Filter by status (draft, approved). Example: approved
+     * @queryParam supplier_passed boolean Filter by supplier pass result. Example: true
+     * @queryParam client_passed boolean Filter by client pass result. Example: true
+     *
+     * @response {"data": [{"id": 1, "ref": "AC-001", "status": "draft"}]}
+     */
     public function index(Request $request, Project $project): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [AcceptanceCriterion::class, $project]);
@@ -36,6 +49,11 @@ class AcceptanceCriterionController extends Controller
         return AcceptanceCriterionResource::collection($query->get());
     }
 
+    /**
+     * Create an acceptance criterion.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "AC-001", "status": "draft"}}
+     */
     public function store(AcceptanceCriterionRequest $request, Project $project): AcceptanceCriterionResource
     {
         $this->authorize('create', [AcceptanceCriterion::class, $project]);
@@ -54,6 +72,11 @@ class AcceptanceCriterionController extends Controller
         return new AcceptanceCriterionResource($criterion->load(['requirement']));
     }
 
+    /**
+     * Get an acceptance criterion.
+     *
+     * @response {"data": {"id": 1, "ref": "AC-001", "description": "..."}}
+     */
     public function show(Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
     {
         $this->authorize('view', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
@@ -61,6 +84,11 @@ class AcceptanceCriterionController extends Controller
         return new AcceptanceCriterionResource($acceptanceCriterion->load(['requirement', 'approvedBy']));
     }
 
+    /**
+     * Update an acceptance criterion.
+     *
+     * @response {"data": {"id": 1, "description": "Updated"}}
+     */
     public function update(AcceptanceCriterionRequest $request, Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
     {
         $this->authorize('update', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
@@ -73,6 +101,11 @@ class AcceptanceCriterionController extends Controller
         return new AcceptanceCriterionResource($acceptanceCriterion->fresh()->load(['requirement']));
     }
 
+    /**
+     * Delete an acceptance criterion (soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, AcceptanceCriterion $acceptanceCriterion): Response
     {
         $this->authorize('delete', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
@@ -82,6 +115,12 @@ class AcceptanceCriterionController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Approve an acceptance criterion (marks it as accepted).
+     *
+     * @response {"data": {"id": 1, "status": "approved"}}
+     * @response 409 {"message": "Acceptance criterion is already approved."}
+     */
     public function approve(Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
     {
         $this->authorize('approve', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);

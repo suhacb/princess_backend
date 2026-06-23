@@ -12,6 +12,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Change Log
+ */
 class ChangeLogController extends Controller
 {
     /**
