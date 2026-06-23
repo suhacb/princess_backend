@@ -13,8 +13,20 @@ use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @tags Reporting
+ */
 class PeriodSummaryController extends Controller
 {
+    /**
+     * Aggregate a period summary for a project (work packages, issues, risks, changes, quality, lessons).
+     *
+     * @queryParam from string required Start date of the period (YYYY-MM-DD). Example: 2026-06-01
+     * @queryParam to string required End date of the period (YYYY-MM-DD). Example: 2026-06-30
+     * @queryParam stage_id integer Scope the summary to a specific stage. Example: 2
+     *
+     * @response {"data": {"period": {"from": "2026-06-01", "to": "2026-06-30"}, "work_packages": {}, "issues": {}, "risks": {}, "changes": {}, "quality": {}, "lessons": {}}}
+     */
     public function index(Request $request, Project $project): JsonResponse
     {
         $this->authorize('viewAny', [CheckpointReport::class, $project]);

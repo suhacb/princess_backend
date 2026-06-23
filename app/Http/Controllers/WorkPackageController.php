@@ -10,6 +10,9 @@ use App\Models\WorkPackage;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Work Packages
+ */
 class WorkPackageController extends Controller
 {
     /**

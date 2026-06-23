@@ -12,10 +12,15 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Plans
+ */
 class PlanController extends Controller
 {
     /**
      * List plans for a project.
+     *
+     * @queryParam type string Filter by plan type (stage, team, exception). Example: stage
      *
      * @response {"data": [{"id": 1, "type": "stage", "name": "Initiation Stage Plan"}]}
      */

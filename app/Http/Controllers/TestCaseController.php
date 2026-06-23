@@ -11,8 +11,16 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Test Cases
+ */
 class TestCaseController extends Controller
 {
+    /**
+     * List test cases for a test scenario.
+     *
+     * @response {"data": [{"id": 1, "ref": "TC-001", "title": "..."}]}
+     */
     public function index(Request $request, Project $project, TestScenario $testScenario): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [TestCase::class, $project, $testScenario]);
@@ -22,6 +30,11 @@ class TestCaseController extends Controller
         );
     }
 
+    /**
+     * Create a test case for a scenario.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "TC-001", "title": "..."}}
+     */
     public function store(TestCaseRequest $request, Project $project, TestScenario $testScenario): TestCaseResource
     {
         $this->authorize('create', [TestCase::class, $project, $testScenario]);
@@ -37,6 +50,11 @@ class TestCaseController extends Controller
         return new TestCaseResource($testCase);
     }
 
+    /**
+     * Get a test case.
+     *
+     * @response {"data": {"id": 1, "ref": "TC-001", "steps": "...", "expected_result": "..."}}
+     */
     public function show(Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
     {
         $this->authorize('view', [TestCase::class, $project, $testScenario, $testCase]);
@@ -44,6 +62,11 @@ class TestCaseController extends Controller
         return new TestCaseResource($testCase);
     }
 
+    /**
+     * Update a test case.
+     *
+     * @response {"data": {"id": 1, "title": "Updated"}}
+     */
     public function update(TestCaseRequest $request, Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
     {
         $this->authorize('update', [TestCase::class, $project, $testScenario, $testCase]);
@@ -55,6 +78,11 @@ class TestCaseController extends Controller
         return new TestCaseResource($testCase->fresh());
     }
 
+    /**
+     * Delete a test case (soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, TestScenario $testScenario, TestCase $testCase): Response
     {
         $this->authorize('delete', [TestCase::class, $project, $testScenario, $testCase]);

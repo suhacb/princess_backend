@@ -11,6 +11,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Projects
+ */
 class ProjectController extends Controller
 {
     /**

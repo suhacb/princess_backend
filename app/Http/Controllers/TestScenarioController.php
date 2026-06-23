@@ -14,8 +14,21 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Test Scenarios
+ */
 class TestScenarioController extends Controller
 {
+    /**
+     * List test scenarios for a project.
+     *
+     * @queryParam type string Filter by type (functional, non_functional, integration, performance). Example: functional
+     * @queryParam status string Filter by status (draft, ready, obsolete). Example: ready
+     * @queryParam is_testable boolean Filter by testability flag. Example: true
+     * @queryParam acceptance_criterion_id integer Filter by linked acceptance criterion ID. Example: 2
+     *
+     * @response {"data": [{"id": 1, "ref": "TSC-001", "type": "functional", "status": "draft"}]}
+     */
     public function index(Request $request, Project $project): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [TestScenario::class, $project]);
@@ -40,6 +53,11 @@ class TestScenarioController extends Controller
         return TestScenarioResource::collection($query->get());
     }
 
+    /**
+     * Create a test scenario.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "TSC-001", "status": "draft", "is_testable": false}}
+     */
     public function store(TestScenarioRequest $request, Project $project): TestScenarioResource
     {
         $this->authorize('create', [TestScenario::class, $project]);
@@ -64,6 +82,11 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($scenario->load(['testCases', 'acceptanceCriteria']));
     }
 
+    /**
+     * Get a test scenario with its test cases and linked acceptance criteria.
+     *
+     * @response {"data": {"id": 1, "ref": "TSC-001", "test_cases": [], "acceptance_criteria": []}}
+     */
     public function show(Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('view', [TestScenario::class, $project, $testScenario]);
@@ -73,6 +96,11 @@ class TestScenarioController extends Controller
         );
     }
 
+    /**
+     * Update a test scenario.
+     *
+     * @response {"data": {"id": 1, "title": "Updated"}}
+     */
     public function update(TestScenarioRequest $request, Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('update', [TestScenario::class, $project, $testScenario]);
@@ -93,6 +121,11 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($testScenario->fresh()->load(['testCases', 'acceptanceCriteria']));
     }
 
+    /**
+     * Delete a test scenario (soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, TestScenario $testScenario): Response
     {
         $this->authorize('delete', [TestScenario::class, $project, $testScenario]);
@@ -102,6 +135,12 @@ class TestScenarioController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Mark a test scenario as ready for execution (requires at least one test case).
+     *
+     * @response {"data": {"id": 1, "status": "ready"}}
+     * @response 409 {"message": "Only draft scenarios can be marked as ready."}
+     */
     public function ready(Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('ready', [TestScenario::class, $project, $testScenario]);
@@ -126,6 +165,12 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($testScenario->fresh());
     }
 
+    /**
+     * Mark a ready scenario as obsolete.
+     *
+     * @response {"data": {"id": 1, "status": "obsolete"}}
+     * @response 409 {"message": "Only ready scenarios can be marked obsolete."}
+     */
     public function obsolete(Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('obsolete', [TestScenario::class, $project, $testScenario]);
@@ -144,6 +189,12 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($testScenario->fresh());
     }
 
+    /**
+     * Reopen an obsolete scenario back to draft.
+     *
+     * @response {"data": {"id": 1, "status": "draft"}}
+     * @response 409 {"message": "Only obsolete scenarios can be reopened."}
+     */
     public function reopen(Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('reopen', [TestScenario::class, $project, $testScenario]);
@@ -162,6 +213,11 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($testScenario->fresh());
     }
 
+    /**
+     * Mark a scenario as testable (requires testable_notes if applicable).
+     *
+     * @response {"data": {"id": 1, "is_testable": true}}
+     */
     public function markTestable(TestScenarioRequest $request, Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('markTestable', [TestScenario::class, $project, $testScenario]);
@@ -174,6 +230,11 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($testScenario->fresh());
     }
 
+    /**
+     * Mark a scenario as not testable (clears testable_notes).
+     *
+     * @response {"data": {"id": 1, "is_testable": false}}
+     */
     public function markNotTestable(Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('markNotTestable', [TestScenario::class, $project, $testScenario]);
@@ -187,6 +248,11 @@ class TestScenarioController extends Controller
         return new TestScenarioResource($testScenario->fresh());
     }
 
+    /**
+     * Export a test scenario as a structured document with test cases and linked ACs.
+     *
+     * @response {"data": {"ref": "TSC-001", "title": "...", "test_cases": [], "acceptance_criteria": []}}
+     */
     public function document(Project $project, TestScenario $testScenario): JsonResponse
     {
         $this->authorize('view', [TestScenario::class, $project, $testScenario]);

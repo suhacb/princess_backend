@@ -10,8 +10,19 @@ use App\Models\Project;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
+/**
+ * @tags Checkpoint Reports
+ */
 class CheckpointReportController extends Controller
 {
+    /**
+     * List checkpoint reports for a project.
+     *
+     * @queryParam status string Filter by status (draft, submitted, acknowledged). Example: submitted
+     * @queryParam work_package_id integer Filter by work package ID. Example: 3
+     *
+     * @response {"data": [{"id": 1, "ref": "CPR-001", "status": "draft"}]}
+     */
     public function index(Project $project): AnonymousResourceCollection
     {
         $this->authorize('viewAny', [CheckpointReport::class, $project]);
@@ -29,6 +40,11 @@ class CheckpointReportController extends Controller
         return CheckpointReportResource::collection($query->latest()->get());
     }
 
+    /**
+     * Create a checkpoint report.
+     *
+     * @response 201 {"data": {"id": 1, "ref": "CPR-001", "status": "draft"}}
+     */
     public function store(CheckpointReportRequest $request, Project $project): CheckpointReportResource
     {
         $this->authorize('create', [CheckpointReport::class, $project]);
@@ -45,6 +61,11 @@ class CheckpointReportController extends Controller
         return new CheckpointReportResource($report->load(['submittedBy', 'acknowledgedBy', 'workPackage']));
     }
 
+    /**
+     * Get a checkpoint report.
+     *
+     * @response {"data": {"id": 1, "ref": "CPR-001"}}
+     */
     public function show(Project $project, CheckpointReport $checkpointReport): CheckpointReportResource
     {
         $this->authorize('view', [CheckpointReport::class, $project, $checkpointReport]);
@@ -52,6 +73,12 @@ class CheckpointReportController extends Controller
         return new CheckpointReportResource($checkpointReport->load(['submittedBy', 'acknowledgedBy', 'workPackage']));
     }
 
+    /**
+     * Update a checkpoint report (draft only).
+     *
+     * @response {"data": {"id": 1, "title": "Updated"}}
+     * @response 409 {"message": "Only draft reports can be edited."}
+     */
     public function update(CheckpointReportRequest $request, Project $project, CheckpointReport $checkpointReport): CheckpointReportResource
     {
         $this->authorize('update', [CheckpointReport::class, $project, $checkpointReport]);
@@ -68,6 +95,11 @@ class CheckpointReportController extends Controller
         return new CheckpointReportResource($checkpointReport->load(['submittedBy', 'acknowledgedBy', 'workPackage']));
     }
 
+    /**
+     * Delete a checkpoint report (draft only, soft delete).
+     *
+     * @response 204 {}
+     */
     public function destroy(Project $project, CheckpointReport $checkpointReport): Response
     {
         $this->authorize('delete', [CheckpointReport::class, $project, $checkpointReport]);
@@ -77,6 +109,12 @@ class CheckpointReportController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Submit a draft checkpoint report to the PM.
+     *
+     * @response {"data": {"id": 1, "status": "submitted"}}
+     * @response 409 {"message": "Only draft reports can be submitted."}
+     */
     public function submit(Project $project, CheckpointReport $checkpointReport): CheckpointReportResource
     {
         $this->authorize('submit', [CheckpointReport::class, $project, $checkpointReport]);
@@ -95,6 +133,12 @@ class CheckpointReportController extends Controller
         return new CheckpointReportResource($checkpointReport->load(['submittedBy', 'acknowledgedBy', 'workPackage']));
     }
 
+    /**
+     * PM acknowledges a submitted checkpoint report.
+     *
+     * @response {"data": {"id": 1, "status": "acknowledged"}}
+     * @response 409 {"message": "Only submitted reports can be acknowledged."}
+     */
     public function acknowledge(Project $project, CheckpointReport $checkpointReport): CheckpointReportResource
     {
         $this->authorize('acknowledge', [CheckpointReport::class, $project, $checkpointReport]);

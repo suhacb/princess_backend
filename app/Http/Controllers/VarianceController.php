@@ -10,8 +10,16 @@ use App\Models\WorkPackage;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
+/**
+ * @tags Reporting
+ */
 class VarianceController extends Controller
 {
+    /**
+     * Return time variance for all plans and work packages in a project.
+     *
+     * @response {"data": {"stage": null, "plans": [], "work_packages": []}}
+     */
     public function index(Project $project): JsonResponse
     {
         $this->authorize('viewAny', [HighlightReport::class, $project]);
@@ -28,6 +36,11 @@ class VarianceController extends Controller
         ]);
     }
 
+    /**
+     * Return time variance for plans and work packages scoped to a specific stage.
+     *
+     * @response {"data": {"stage": {"id": 1, "name": "Delivery"}, "plans": [], "work_packages": []}}
+     */
     public function show(Project $project, Stage $stage): JsonResponse
     {
         $this->authorize('viewAny', [HighlightReport::class, $project]);
