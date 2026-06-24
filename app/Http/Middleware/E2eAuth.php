@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Person;
 use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
@@ -27,11 +28,23 @@ class E2eAuth
         $original = DB::getDefaultConnection();
         DB::setDefaultConnection('e2e');
 
-        $user = User::firstOrCreate(
-            ['email' => 'e2e@princess.test'],
-            ['name' => 'E2E User', 'external_id' => 'e2e-user', 'username' => 'e2e'],
-        );
-        Auth::login($user);
+        // Tables may not exist yet on a fresh DB (e.g. during migrate:fresh reset).
+        // Token is already validated above — allow the request through regardless.
+        try {
+            $user = User::firstOrCreate(
+                ['email' => 'e2e@princess.test'],
+                ['name' => 'E2E User', 'external_id' => 'e2e-user', 'username' => 'e2e'],
+            );
+            // Policies check person_id !== null; mirror what UserService::handleUserFromToken does.
+            if (is_null($user->person_id)) {
+                $person = Person::firstOrCreate(
+                    ['email' => 'e2e@princess.test'],
+                    ['name'  => 'E2E User']
+                );
+                $user->update(['person_id' => $person->id]);
+            }
+            Auth::login($user);
+        } catch (\Exception) {}
 
         $request->attributes->set('e2e_authenticated', true);
 
