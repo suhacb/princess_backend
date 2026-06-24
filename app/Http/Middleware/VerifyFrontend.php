@@ -20,6 +20,10 @@ class VerifyFrontend
 
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->attributes->get('e2e_authenticated')) {
+            return $next($request);
+        }
+
         $accessToken  = $request->bearerToken();
         $refreshToken = $request->header('X-Refresh-Token');
         $appName      = $request->header('X-Application-Name');

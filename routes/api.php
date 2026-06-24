@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcceptanceCriterionController;
+use App\Http\Controllers\E2eController;
 use App\Http\Controllers\CheckpointReportController;
 use App\Http\Controllers\ExceptionReportController;
 use App\Http\Controllers\HighlightReportController;
@@ -40,6 +41,8 @@ Route::prefix('auth')->name('auth.')->group(function () {
     Route::get('validate-access-token', [LoginController::class, 'validateAccessToken'])->name('validate-access-token');
     Route::post('logout', [LoginController::class, 'logout'])->name('logout');
 });
+
+Route::middleware('e2e.only')->post('e2e/reset', [E2eController::class, 'reset'])->name('e2e.reset');
 
 Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects', ProjectController::class);

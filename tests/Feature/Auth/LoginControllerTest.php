@@ -53,4 +53,12 @@ class LoginControllerTest extends TestCase
         ])->postJson('/api/auth/logout')
             ->assertStatus(503);
     }
+
+    public function test_validate_access_token_returns_true_for_e2e_authenticated_request(): void
+    {
+        $this->withHeader('X-E2E-Token', config('app.e2e_token'))
+            ->getJson('/api/auth/validate-access-token')
+            ->assertOk()
+            ->assertContent('"true"');
+    }
 }

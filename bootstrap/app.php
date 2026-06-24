@@ -13,8 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(\App\Http\Middleware\E2eAuth::class);
+
         $middleware->alias([
             'verify.frontend' => \App\Http\Middleware\VerifyFrontend::class,
+            'e2e.only'        => \App\Http\Middleware\E2eOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

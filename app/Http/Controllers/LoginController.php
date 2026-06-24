@@ -42,6 +42,10 @@ class LoginController extends Controller
      */
     public function validateAccessToken(Request $request): JsonResponse
     {
+        if ($request->attributes->get('e2e_authenticated')) {
+            return response()->json('true', 200);
+        }
+
         $accessToken  = $request->bearerToken();
         $refreshToken = $request->header('X-Refresh-Token');
         $appName      = $request->header('X-Application-Name');
