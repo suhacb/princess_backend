@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\E2e;
 
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -32,11 +31,29 @@ class E2eAuthMiddlewareTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::connection('e2e')->table('users')->where('email', 'e2e@princess.test')->delete();
+        DB::connection('e2e')->table('users')->where('external_id', 'like', 'e2e-%')->delete();
         parent::tearDown();
     }
 
-    public function test_request_without_header_passes_through_normally(): void
+    private function makeJwt(string $sub): string
+    {
+        $payload = rtrim(strtr(base64_encode(json_encode(['sub' => $sub])), '+/', '-_'), '=');
+        return "fakeheader.{$payload}.fakesig";
+    }
+
+    private function seedE2eUser(string $externalId): void
+    {
+        DB::connection('e2e')->table('users')->insert([
+            'external_id' => $externalId,
+            'username'    => str_replace('-', '_', $externalId),
+            'name'        => 'E2E Test User',
+            'email'       => "{$externalId}@princess.test",
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+    }
+
+    public function test_request_without_e2e_header_passes_through_normally(): void
     {
         $this->getJson('/_test/e2e-probe')
             ->assertOk()
@@ -51,14 +68,12 @@ class E2eAuthMiddlewareTest extends TestCase
             ->assertJsonPath('error', 'Invalid E2E token');
     }
 
-    public function test_correct_token_sets_e2e_flag_and_logs_in_user(): void
+    public function test_correct_token_sets_e2e_flag(): void
     {
-        $response = $this->withHeader('X-E2E-Token', $this->token)
+        $this->withHeader('X-E2E-Token', $this->token)
             ->getJson('/_test/e2e-probe')
-            ->assertOk();
-
-        $response->assertJsonPath('e2e_flag', true);
-        $response->assertJsonPath('authenticated', true);
+            ->assertOk()
+            ->assertJsonPath('e2e_flag', true);
     }
 
     public function test_correct_token_switches_default_connection_to_e2e(): void
@@ -69,35 +84,39 @@ class E2eAuthMiddlewareTest extends TestCase
             ->assertJsonPath('connection', 'e2e');
     }
 
-    public function test_e2e_user_is_created_if_not_present(): void
+    public function test_logs_in_user_matching_jwt_sub(): void
     {
-        $e2e = DB::connection('e2e');
-        $this->assertSame(0, $e2e->table('users')->where('email', 'e2e@princess.test')->count());
+        $this->seedE2eUser('e2e-project-manager');
 
-        $this->withHeader('X-E2E-Token', $this->token)
+        $this->withHeaders([
+                'X-E2E-Token'   => $this->token,
+                'Authorization' => 'Bearer ' . $this->makeJwt('e2e-project-manager'),
+            ])
             ->getJson('/_test/e2e-probe')
-            ->assertOk();
-
-        $this->assertSame(1, $e2e->table('users')->where('email', 'e2e@princess.test')->count());
+            ->assertOk()
+            ->assertJsonPath('authenticated', true)
+            ->assertJsonPath('e2e_flag', true);
     }
 
-    public function test_e2e_user_is_reused_if_already_exists(): void
+    public function test_no_bearer_token_sets_flag_but_skips_login(): void
     {
-        $e2e = DB::connection('e2e');
-        $e2e->table('users')->insert([
-            'email'       => 'e2e@princess.test',
-            'name'        => 'E2E User',
-            'external_id' => 'e2e-user',
-            'username'    => 'e2e',
-            'created_at'  => now(),
-            'updated_at'  => now(),
-        ]);
-
         $this->withHeader('X-E2E-Token', $this->token)
             ->getJson('/_test/e2e-probe')
-            ->assertOk();
+            ->assertOk()
+            ->assertJsonPath('e2e_flag', true)
+            ->assertJsonPath('authenticated', false);
+    }
 
-        $this->assertSame(1, $e2e->table('users')->where('email', 'e2e@princess.test')->count());
+    public function test_unknown_sub_in_jwt_sets_flag_but_skips_login(): void
+    {
+        $this->withHeaders([
+                'X-E2E-Token'   => $this->token,
+                'Authorization' => 'Bearer ' . $this->makeJwt('e2e-does-not-exist'),
+            ])
+            ->getJson('/_test/e2e-probe')
+            ->assertOk()
+            ->assertJsonPath('e2e_flag', true)
+            ->assertJsonPath('authenticated', false);
     }
 
     public function test_no_bypass_when_e2e_token_not_configured(): void

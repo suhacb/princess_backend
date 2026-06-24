@@ -31,19 +31,32 @@ class E2eAuth
         // Tables may not exist yet on a fresh DB (e.g. during migrate:fresh reset).
         // Token is already validated above — allow the request through regardless.
         try {
-            $user = User::firstOrCreate(
-                ['email' => 'e2e@princess.test'],
-                ['name' => 'E2E User', 'external_id' => 'e2e-user', 'username' => 'e2e'],
-            );
-            // Policies check person_id !== null; mirror what UserService::handleUserFromToken does.
-            if (is_null($user->person_id)) {
-                $person = Person::firstOrCreate(
-                    ['email' => 'e2e@princess.test'],
-                    ['name'  => 'E2E User']
-                );
-                $user->update(['person_id' => $person->id]);
+            $externalId = null;
+            $bearer = $request->bearerToken();
+            if ($bearer) {
+                $parts = explode('.', $bearer);
+                if (count($parts) === 3) {
+                    $payload = json_decode(
+                        base64_decode(strtr($parts[1], '-_', '+/')), true
+                    );
+                    $externalId = $payload['sub'] ?? null;
+                }
             }
-            Auth::login($user);
+
+            $user = $externalId
+                ? User::where('external_id', $externalId)->first()
+                : null;
+
+            if ($user) {
+                if (is_null($user->person_id)) {
+                    $person = Person::firstOrCreate(
+                        ['email' => $user->email],
+                        ['name'  => $user->name]
+                    );
+                    $user->update(['person_id' => $person->id]);
+                }
+                Auth::login($user);
+            }
         } catch (\Exception) {}
 
         $request->attributes->set('e2e_authenticated', true);

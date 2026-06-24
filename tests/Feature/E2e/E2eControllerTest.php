@@ -21,7 +21,7 @@ class E2eControllerTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::connection('e2e')->table('users')->where('email', 'e2e@princess.test')->delete();
+        DB::connection('e2e')->table('users')->where('external_id', 'like', 'e2e-%')->delete();
         parent::tearDown();
     }
 
