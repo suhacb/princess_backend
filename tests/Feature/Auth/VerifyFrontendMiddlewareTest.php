@@ -109,4 +109,12 @@ class VerifyFrontendMiddlewareTest extends TestCase
             ->getJson('/_test/protected')
             ->assertStatus(503);
     }
+
+    public function test_e2e_authenticated_request_bypasses_keycloak_check(): void
+    {
+        $this->withHeader('X-E2E-Token', config('app.e2e_token'))
+            ->getJson('/_test/protected')
+            ->assertOk()
+            ->assertJsonPath('ok', true);
+    }
 }

@@ -28,6 +28,8 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+    'e2e_token' => env('E2E_TOKEN'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode
