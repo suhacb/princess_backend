@@ -30,6 +30,8 @@ use App\Http\Controllers\ProjectProductDescriptionController;
 use App\Http\Controllers\QualityRegisterController;
 use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StageBoundaryController;
+use App\Http\Controllers\MeetingActionItemController;
+use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\StageController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -225,4 +227,12 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects.tasks', TaskController::class);
     Route::get('projects/{project}/tasks/{task}/history', [TaskController::class, 'history'])
         ->name('projects.tasks.history');
+
+    Route::apiResource('projects.meetings', MeetingController::class);
+    Route::post('projects/{project}/meetings/{meeting}/action-items', [MeetingActionItemController::class, 'store'])
+        ->name('projects.meetings.action-items.store');
+    Route::patch('projects/{project}/meetings/{meeting}/action-items/{actionItem}', [MeetingActionItemController::class, 'update'])
+        ->name('projects.meetings.action-items.update');
+    Route::delete('projects/{project}/meetings/{meeting}/action-items/{actionItem}', [MeetingActionItemController::class, 'destroy'])
+        ->name('projects.meetings.action-items.destroy');
 });

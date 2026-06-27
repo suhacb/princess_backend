@@ -118,6 +118,11 @@ class Project extends Model
         return $this->hasMany(Task::class);
     }
 
+    public function meetings(): HasMany
+    {
+        return $this->hasMany(Meeting::class);
+    }
+
     public function requirements(): HasMany
     {
         return $this->hasMany(Requirement::class);
