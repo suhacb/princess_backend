@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
-use Spatie\Activitylog\Models\Activity;
+use App\Models\ActivityLog;
 
 /**
  * @tags Tasks
@@ -145,14 +145,14 @@ class TaskController extends Controller
     {
         $this->authorize('history', [Task::class, $project, $task]);
 
-        $activities = Activity::query()
+        $activities = ActivityLog::query()
             ->where('subject_type', Task::class)
             ->where('subject_id', $task->id)
             ->with(['causer.person'])
             ->latest()
             ->get();
 
-        $data = $activities->map(function (Activity $activity) {
+        $data = $activities->map(function (ActivityLog $activity) {
             $causer  = $activity->causer;
             $changes = $activity->attribute_changes;
 

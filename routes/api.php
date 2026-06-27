@@ -30,6 +30,7 @@ use App\Http\Controllers\ProjectProductDescriptionController;
 use App\Http\Controllers\QualityRegisterController;
 use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StageBoundaryController;
+use App\Http\Controllers\AuditTrailController;
 use App\Http\Controllers\MeetingActionItemController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\StageController;
@@ -227,6 +228,9 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects.tasks', TaskController::class);
     Route::get('projects/{project}/tasks/{task}/history', [TaskController::class, 'history'])
         ->name('projects.tasks.history');
+
+    Route::get('projects/{project}/audit-trail', [AuditTrailController::class, 'index'])
+        ->name('projects.audit-trail');
 
     Route::apiResource('projects.meetings', MeetingController::class);
     Route::post('projects/{project}/meetings/{meeting}/action-items', [MeetingActionItemController::class, 'store'])

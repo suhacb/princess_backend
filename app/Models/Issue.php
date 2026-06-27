@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
 use App\Enums\IssueType;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Issue extends Model
 {
-    use HasFactory;
+    use HasFactory, IsAuditable;
+
+    protected array $auditableFields = [
+        'title', 'description', 'issue_type', 'priority', 'status', 'assigned_to', 'resolution', 'resolved_at', 'escalated_at',
+    ];
 
     protected $fillable = [
         'project_id',

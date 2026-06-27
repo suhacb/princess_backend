@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WorkPackageStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,7 +12,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class WorkPackage extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, IsAuditable;
+
+    protected array $auditableFields = [
+        'title', 'description', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end',
+    ];
 
     protected $fillable = [
         'project_id',

@@ -5,13 +5,18 @@ namespace App\Models;
 use App\Enums\RiskProximity;
 use App\Enums\RiskResponseType;
 use App\Enums\RiskStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Risk extends Model
 {
-    use HasFactory;
+    use HasFactory, IsAuditable;
+
+    protected array $auditableFields = [
+        'title', 'description', 'category', 'probability', 'impact', 'proximity', 'status', 'response_type', 'response_action', 'risk_owner',
+    ];
 
     protected $fillable = [
         'project_id',

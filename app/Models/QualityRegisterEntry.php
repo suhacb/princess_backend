@@ -4,13 +4,16 @@ namespace App\Models;
 
 use App\Enums\QualityMethod;
 use App\Enums\QualityResult;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class QualityRegisterEntry extends Model
 {
-    use HasFactory;
+    use HasFactory, IsAuditable;
+
+    protected array $auditableFields = ['product_name', 'quality_method', 'planned_date', 'actual_date', 'result', 'issues_raised'];
 
     protected $fillable = [
         'project_id',

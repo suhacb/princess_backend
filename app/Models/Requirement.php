@@ -11,10 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\IsAuditable;
 
 class Requirement extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, IsAuditable;
+
+    protected array $auditableFields = ['title', 'description', 'type', 'priority', 'status', 'owner_id'];
 
     protected $fillable = [
         'project_id',

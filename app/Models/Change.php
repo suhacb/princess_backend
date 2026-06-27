@@ -4,13 +4,18 @@ namespace App\Models;
 
 use App\Enums\ChangeRequestType;
 use App\Enums\ChangeStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Change extends Model
 {
-    use HasFactory;
+    use HasFactory, IsAuditable;
+
+    protected array $auditableFields = [
+        'title', 'description', 'request_type', 'priority', 'status', 'decision_rationale', 'implementation_due', 'implemented_at',
+    ];
 
     protected $table = 'changes';
 

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ProjectStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, IsAuditable;
+
+    protected array $auditableFields = [
+        'name', 'description', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end',
+    ];
+
+    protected function resolveProjectId(): ?int
+    {
+        return $this->id;
+    }
 
     protected $attributes = [
         'status'  => 'pre_project',

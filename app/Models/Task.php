@@ -4,16 +4,19 @@ namespace App\Models;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, SoftDeletes, IsAuditable;
+
+    protected array $auditableFields = [
+        'title', 'description', 'assigned_to', 'due_date', 'status', 'priority', 'stage_id', 'work_package_id',
+    ];
 
     protected $fillable = [
         'project_id',
@@ -34,14 +37,6 @@ class Task extends Model
         'priority' => TaskPriority::class,
         'due_date' => 'date',
     ];
-
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['title', 'description', 'assigned_to', 'due_date', 'status', 'priority', 'stage_id', 'work_package_id'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
 
     public function project(): BelongsTo
     {
