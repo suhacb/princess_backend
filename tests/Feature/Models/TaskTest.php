@@ -10,7 +10,7 @@ use App\Models\Stage;
 use App\Models\Task;
 use App\Models\WorkPackage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Spatie\Activitylog\Models\Activity;
+use App\Models\ActivityLog;
 use Tests\TestCase;
 
 class TaskTest extends TestCase
@@ -150,7 +150,7 @@ class TaskTest extends TestCase
 
         $task->update(['status' => TaskStatus::Done->value]);
 
-        $activity = Activity::where('subject_type', Task::class)
+        $activity = ActivityLog::where('subject_type', Task::class)
             ->where('subject_id', $task->id)
             ->where('event', 'updated')
             ->first();

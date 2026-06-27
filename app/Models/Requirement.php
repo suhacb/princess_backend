@@ -11,26 +11,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
+use App\Traits\IsAuditable;
 
 class Requirement extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, SoftDeletes, IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['title', 'description', 'type', 'priority', 'status', 'owner_id'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
-
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
-    {
-        $activity->properties = $activity->properties->put('project_id', $this->project_id);
-    }
+    protected array $auditableFields = ['title', 'description', 'type', 'priority', 'status', 'owner_id'];
 
     protected $fillable = [
         'project_id',

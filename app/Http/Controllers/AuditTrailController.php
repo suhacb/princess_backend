@@ -16,7 +16,7 @@ use App\Models\Task;
 use App\Models\WorkPackage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\Activitylog\Models\Activity;
+use App\Models\ActivityLog;
 
 /**
  * @tags Audit Trail
@@ -67,7 +67,7 @@ class AuditTrailController extends Controller
             'to'          => ['nullable', 'date'],
         ]);
 
-        $activities = Activity::query()
+        $activities = ActivityLog::query()
             ->where('properties->project_id', $project->id)
             ->when($request->entity_type, fn ($q, $v) => $q->where('subject_type', self::ENTITY_TYPES[$v]))
             ->when($request->actor, function ($q, $v) {
@@ -81,7 +81,7 @@ class AuditTrailController extends Controller
 
         $typeMap = array_flip(self::ENTITY_TYPES);
 
-        $data = $activities->getCollection()->map(function (Activity $activity) use ($typeMap) {
+        $data = $activities->getCollection()->map(function (ActivityLog $activity) use ($typeMap) {
             $causer  = $activity->causer;
             $subject = $activity->subject;
             $type    = $typeMap[$activity->subject_type] ?? $activity->subject_type;

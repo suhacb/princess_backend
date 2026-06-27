@@ -4,31 +4,20 @@ namespace App\Models;
 
 use App\Enums\StageStatus;
 use App\Enums\StageType;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Stage extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, SoftDeletes, IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['name', 'type', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
-
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
-    {
-        $activity->properties = $activity->properties->put('project_id', $this->project_id);
-    }
+    protected array $auditableFields = [
+        'name', 'type', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end',
+    ];
 
     protected $attributes = [
         'status'  => 'planned',

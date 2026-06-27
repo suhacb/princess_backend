@@ -4,28 +4,15 @@ namespace App\Models;
 
 use App\Enums\PersonSide;
 use App\Enums\ProjectRole;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class ProjectMember extends Model
 {
-    use LogsActivity;
+    use IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['role', 'person_id'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
-
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
-    {
-        $activity->properties = $activity->properties->put('project_id', $this->project_id);
-    }
+    protected array $auditableFields = ['role', 'person_id'];
     protected $fillable = [
         'project_id',
         'person_id',

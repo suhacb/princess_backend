@@ -2,32 +2,19 @@
 
 namespace App\Models;
 
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Meeting extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, SoftDeletes, IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['title', 'date_time', 'agenda', 'minutes_body'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
-
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
-    {
-        $activity->properties = $activity->properties->put('project_id', $this->project_id);
-    }
+    protected array $auditableFields = ['title', 'date_time', 'agenda', 'minutes_body'];
 
     protected static function booted(): void
     {

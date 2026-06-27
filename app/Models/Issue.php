@@ -5,30 +5,19 @@ namespace App\Models;
 use App\Enums\IssuePriority;
 use App\Enums\IssueStatus;
 use App\Enums\IssueType;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Issue extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['title', 'description', 'issue_type', 'priority', 'status', 'assigned_to', 'resolution', 'resolved_at', 'escalated_at'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
-
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
-    {
-        $activity->properties = $activity->properties->put('project_id', $this->project_id);
-    }
+    protected array $auditableFields = [
+        'title', 'description', 'issue_type', 'priority', 'status', 'assigned_to', 'resolution', 'resolved_at', 'escalated_at',
+    ];
 
     protected $fillable = [
         'project_id',

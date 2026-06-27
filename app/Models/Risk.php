@@ -5,29 +5,18 @@ namespace App\Models;
 use App\Enums\RiskProximity;
 use App\Enums\RiskResponseType;
 use App\Enums\RiskStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Risk extends Model
 {
-    use HasFactory, LogsActivity;
+    use HasFactory, IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['title', 'description', 'category', 'probability', 'impact', 'proximity', 'status', 'response_type', 'response_action', 'risk_owner'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
-
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
-    {
-        $activity->properties = $activity->properties->put('project_id', $this->project_id);
-    }
+    protected array $auditableFields = [
+        'title', 'description', 'category', 'probability', 'impact', 'proximity', 'status', 'response_type', 'response_action', 'risk_owner',
+    ];
 
     protected $fillable = [
         'project_id',

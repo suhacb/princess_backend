@@ -3,31 +3,25 @@
 namespace App\Models;
 
 use App\Enums\ProjectStatus;
+use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Spatie\Activitylog\Contracts\Activity;
-use Spatie\Activitylog\Models\Concerns\LogsActivity;
-use Spatie\Activitylog\Support\LogOptions;
 
 class Project extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, SoftDeletes, IsAuditable;
 
-    public function getActivitylogOptions(): LogOptions
-    {
-        return LogOptions::defaults()
-            ->logOnly(['name', 'description', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end'])
-            ->logOnlyDirty()
-            ->dontLogEmptyChanges();
-    }
+    protected array $auditableFields = [
+        'name', 'description', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end',
+    ];
 
-    public function beforeActivityLogged(Activity $activity, string $eventName): void
+    protected function resolveProjectId(): ?int
     {
-        $activity->properties = $activity->properties->put('project_id', $this->id);
+        return $this->id;
     }
 
     protected $attributes = [
