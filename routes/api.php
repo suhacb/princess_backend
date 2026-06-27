@@ -31,6 +31,7 @@ use App\Http\Controllers\QualityRegisterController;
 use App\Http\Controllers\RiskController;
 use App\Http\Controllers\StageBoundaryController;
 use App\Http\Controllers\StageController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('health', [HealthController::class, 'check'])->name('health');
@@ -220,4 +221,8 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.work-packages.cancel');
     Route::post('projects/{project}/work-packages/{workPackage}/raise-exception', [ExceptionReportController::class, 'raiseException'])
         ->name('projects.work-packages.raise-exception');
+
+    Route::apiResource('projects.tasks', TaskController::class);
+    Route::get('projects/{project}/tasks/{task}/history', [TaskController::class, 'history'])
+        ->name('projects.tasks.history');
 });
