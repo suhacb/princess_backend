@@ -113,6 +113,11 @@ class Project extends Model
         return $this->hasMany(WorkPackage::class);
     }
 
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
     public function requirements(): HasMany
     {
         return $this->hasMany(Requirement::class);
