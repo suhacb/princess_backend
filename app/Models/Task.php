@@ -43,6 +43,11 @@ class Task extends Model
             ->dontLogEmptyChanges();
     }
 
+    public function beforeActivityLogged(\Spatie\Activitylog\Contracts\Activity $activity, string $eventName): void
+    {
+        $activity->properties = $activity->properties->put('project_id', $this->project_id);
+    }
+
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);

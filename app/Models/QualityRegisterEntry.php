@@ -7,10 +7,26 @@ use App\Enums\QualityResult;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Contracts\Activity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class QualityRegisterEntry extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['product_name', 'quality_method', 'planned_date', 'actual_date', 'result', 'issues_raised'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
+
+    public function beforeActivityLogged(Activity $activity, string $eventName): void
+    {
+        $activity->properties = $activity->properties->put('project_id', $this->project_id);
+    }
 
     protected $fillable = [
         'project_id',

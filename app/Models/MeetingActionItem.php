@@ -6,10 +6,26 @@ use App\Enums\MeetingActionItemStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Spatie\Activitylog\Contracts\Activity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class MeetingActionItem extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['description', 'due_date', 'status', 'owner_id'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
+
+    public function beforeActivityLogged(Activity $activity, string $eventName): void
+    {
+        $activity->properties = $activity->properties->put('project_id', $this->meeting?->project_id);
+    }
 
     protected $fillable = [
         'meeting_id',

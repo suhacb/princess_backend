@@ -9,10 +9,26 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Contracts\Activity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Project extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'description', 'status', 'planned_start', 'planned_end', 'actual_start', 'actual_end'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
+
+    public function beforeActivityLogged(Activity $activity, string $eventName): void
+    {
+        $activity->properties = $activity->properties->put('project_id', $this->id);
+    }
 
     protected $attributes = [
         'status'  => 'pre_project',

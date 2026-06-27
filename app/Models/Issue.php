@@ -9,10 +9,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Contracts\Activity;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Issue extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['title', 'description', 'issue_type', 'priority', 'status', 'assigned_to', 'resolution', 'resolved_at', 'escalated_at'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
+
+    public function beforeActivityLogged(Activity $activity, string $eventName): void
+    {
+        $activity->properties = $activity->properties->put('project_id', $this->project_id);
+    }
 
     protected $fillable = [
         'project_id',
