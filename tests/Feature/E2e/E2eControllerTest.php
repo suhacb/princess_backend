@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\E2e;
 
+use App\Contracts\GarageAdminClientContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -85,5 +86,36 @@ class E2eControllerTest extends TestCase
         $this->withHeader('X-E2E-Token', $this->token)
             ->postJson('/api/e2e/reset?full=true')
             ->assertOk();
+    }
+
+    public function test_reset_never_touches_garage_when_prefix_is_not_e2e(): void
+    {
+        // The test env uses GARAGE_S3_BUCKET_PREFIX=princess-test-project, which does not
+        // match the 'princess-e2e' safety guard — Garage must never be called.
+        Artisan::shouldReceive('call')->with('db:seed', \Mockery::any());
+
+        $this->mock(GarageAdminClientContract::class)
+            ->shouldNotReceive('listBucketsWithPrefix');
+
+        $this->withHeader('X-E2E-Token', $this->token)
+            ->postJson('/api/e2e/reset')
+            ->assertOk();
+    }
+
+    public function test_reset_succeeds_even_when_garage_is_unreachable(): void
+    {
+        Artisan::shouldReceive('call')->with('db:seed', \Mockery::any());
+
+        // Override config to simulate an e2e environment, then make Garage throw.
+        config(['princess.garage.bucket_prefix' => 'princess-e2e-project']);
+
+        $this->mock(GarageAdminClientContract::class)
+            ->shouldReceive('listBucketsWithPrefix')
+            ->andThrow(new \RuntimeException('Connection refused'));
+
+        $this->withHeader('X-E2E-Token', $this->token)
+            ->postJson('/api/e2e/reset')
+            ->assertOk()
+            ->assertJsonPath('status', 'ok');
     }
 }

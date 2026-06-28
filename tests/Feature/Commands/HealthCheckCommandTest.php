@@ -3,6 +3,7 @@
 namespace Tests\Feature\Commands;
 
 use App\Contracts\AuthGatewayClientContract;
+use App\Contracts\GarageAdminClientContract;
 use App\Contracts\GraphClientContract;
 use App\Contracts\OllamaClientContract;
 use App\Contracts\QdrantClientContract;
@@ -17,6 +18,7 @@ class HealthCheckCommandTest extends TestCase
     {
         foreach ([
             AuthGatewayClientContract::class,
+            GarageAdminClientContract::class,
             GraphClientContract::class,
             OllamaClientContract::class,
             QdrantClientContract::class,
@@ -62,7 +64,8 @@ class HealthCheckCommandTest extends TestCase
             ->expectsOutputToContain('ZincSearch')
             ->expectsOutputToContain('Qdrant')
             ->expectsOutputToContain('Ollama')
-            ->expectsOutputToContain('M365 Graph');
+            ->expectsOutputToContain('M365 Graph')
+            ->expectsOutputToContain('Garage S3');
     }
 
     public function test_output_reports_failure_summary_when_services_are_down(): void
