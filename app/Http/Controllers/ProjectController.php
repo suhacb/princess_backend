@@ -7,6 +7,7 @@ use App\Http\Requests\Project\ProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Models\Stage;
+use App\Services\Document\ProjectStorageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -16,6 +17,10 @@ use Illuminate\Http\Response;
  */
 class ProjectController extends Controller
 {
+    public function __construct(
+        private readonly ProjectStorageService $projectStorage,
+    ) {}
+
     /**
      * List all projects.
      *
@@ -51,6 +56,13 @@ class ProjectController extends Controller
             'person_id' => $personId,
             'role'      => ProjectRole::ProjectManager->value,
         ]);
+
+        try {
+            $this->projectStorage->provision($project);
+        } catch (\Throwable) {
+            $project->forceDelete();
+            abort(503, 'Storage service unavailable. Project creation failed.');
+        }
 
         return new ProjectResource($project->load(['createdBy']));
     }
