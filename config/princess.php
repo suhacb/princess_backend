@@ -45,6 +45,21 @@ return [
         'client_secret' => env('M365_CLIENT_SECRET'),
     ],
 
+    'garage' => [
+        'admin_url'         => env('GARAGE_ADMIN_URL', 'http://garage:3903'),
+        's3_endpoint'       => env('AWS_ENDPOINT', 'http://garage:3900'),
+        'access_key_id'     => env('GARAGE_ACCESS_KEY_ID'),
+        'secret_access_key' => env('GARAGE_SECRET_ACCESS_KEY'),
+        'region'            => env('GARAGE_REGION', 'garage'),
+        'bucket_prefix'     => env('GARAGE_S3_BUCKET_PREFIX', 'princess-project'),
+        'templates_bucket'  => env('GARAGE_TEMPLATES_BUCKET', 'princess-templates'),
+    ],
+
+    'onlyoffice' => [
+        'url'        => env('ONLYOFFICE_URL', 'http://onlyoffice'),
+        'jwt_secret' => env('ONLYOFFICE_JWT_SECRET'),
+    ],
+
     'e2e' => [
         'token' => env('E2E_TOKEN'),
     ],

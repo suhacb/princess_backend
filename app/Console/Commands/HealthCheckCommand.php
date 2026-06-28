@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Contracts\AuthGatewayClientContract;
+use App\Contracts\GarageAdminClientContract;
 use App\Contracts\GraphClientContract;
 use App\Contracts\OllamaClientContract;
 use App\Contracts\QdrantClientContract;
@@ -30,6 +31,7 @@ class HealthCheckCommand extends Command
             'Qdrant'       => fn () => app(QdrantClientContract::class)->ping(),
             'Ollama'       => fn () => app(OllamaClientContract::class)->ping(),
             'M365 Graph'   => fn () => app(GraphClientContract::class)->ping(),
+            'Garage S3'    => fn () => app(GarageAdminClientContract::class)->ping(),
         ];
 
         $failures = 0;
