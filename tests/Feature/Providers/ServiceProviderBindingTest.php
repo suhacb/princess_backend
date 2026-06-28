@@ -3,11 +3,13 @@
 namespace Tests\Feature\Providers;
 
 use App\Clients\AuthBackendClient;
+use App\Clients\GarageAdminClient;
 use App\Clients\GraphClient;
 use App\Clients\OllamaClient;
 use App\Clients\QdrantClient;
 use App\Clients\ZincSearchClient;
 use App\Contracts\AuthGatewayClientContract;
+use App\Contracts\GarageAdminClientContract;
 use App\Contracts\GraphClientContract;
 use App\Contracts\OllamaClientContract;
 use App\Contracts\QdrantClientContract;
@@ -41,6 +43,11 @@ class ServiceProviderBindingTest extends TestCase
         $this->assertInstanceOf(ZincSearchClient::class, app(ZincSearchClientContract::class));
     }
 
+    public function test_garage_admin_contract_resolves_to_garage_admin_client(): void
+    {
+        $this->assertInstanceOf(GarageAdminClient::class, app(GarageAdminClientContract::class));
+    }
+
     public function test_all_bindings_are_singletons(): void
     {
         $this->assertSame(app(AuthGatewayClientContract::class), app(AuthGatewayClientContract::class));
@@ -48,5 +55,6 @@ class ServiceProviderBindingTest extends TestCase
         $this->assertSame(app(OllamaClientContract::class), app(OllamaClientContract::class));
         $this->assertSame(app(QdrantClientContract::class), app(QdrantClientContract::class));
         $this->assertSame(app(ZincSearchClientContract::class), app(ZincSearchClientContract::class));
+        $this->assertSame(app(GarageAdminClientContract::class), app(GarageAdminClientContract::class));
     }
 }
