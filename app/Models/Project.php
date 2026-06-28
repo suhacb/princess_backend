@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\DocumentProvider;
 use App\Enums\ProjectStatus;
 use App\Traits\IsAuditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,6 +33,7 @@ class Project extends Model
     protected $fillable = [
         'name',
         'reference',
+        'document_provider',
         'description',
         'status',
         'current_stage_id',
@@ -51,7 +53,8 @@ class Project extends Model
     ];
 
     protected $casts = [
-        'status'        => ProjectStatus::class,
+        'status'            => ProjectStatus::class,
+        'document_provider' => DocumentProvider::class,
         'planned_start' => 'date',
         'planned_end'   => 'date',
         'actual_start'  => 'date',

@@ -7,6 +7,7 @@ use App\Models\Person;
 use App\Models\Project;
 use App\Models\Stage;
 use App\Models\User;
+use App\Services\Document\ProjectStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -22,6 +23,10 @@ class ProjectControllerTest extends TestCase
         parent::setUp();
 
         $this->withoutMiddleware(\App\Http\Middleware\VerifyFrontend::class);
+
+        $this->mock(ProjectStorageService::class)
+            ->shouldReceive('provision')
+            ->andReturnNull();
 
         $this->person = Person::factory()->create();
         $this->user   = User::factory()->create(['person_id' => $this->person->id]);
@@ -156,5 +161,28 @@ class ProjectControllerTest extends TestCase
 
         $this->patchJson("/api/projects/{$project->id}/current-stage", ['stage_id' => $stage->id])
             ->assertNotFound();
+    }
+
+    public function test_store_calls_storage_provision(): void
+    {
+        $this->mock(ProjectStorageService::class)
+            ->shouldReceive('provision')
+            ->once()
+            ->andReturnNull();
+
+        $this->postJson('/api/projects', ['name' => 'Provisioned Project'])
+            ->assertCreated();
+    }
+
+    public function test_store_returns_503_and_removes_project_when_storage_unavailable(): void
+    {
+        $this->mock(ProjectStorageService::class)
+            ->shouldReceive('provision')
+            ->andThrow(new \RuntimeException('Garage unreachable'));
+
+        $this->postJson('/api/projects', ['name' => 'Failed Project'])
+            ->assertStatus(503);
+
+        $this->assertDatabaseMissing('projects', ['name' => 'Failed Project']);
     }
 }

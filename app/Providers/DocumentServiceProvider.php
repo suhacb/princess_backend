@@ -1,0 +1,35 @@
+<?php
+
+namespace App\Providers;
+
+use App\Contracts\DocumentEditorDriver;
+use App\Contracts\DocumentStorageDriver;
+use App\Enums\DocumentProvider;
+use App\Services\Document\GarageStorageService;
+use App\Services\Document\M365EditorService;
+use App\Services\Document\M365StorageService;
+use Illuminate\Support\ServiceProvider;
+
+class DocumentServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->bind(DocumentStorageDriver::class, function ($app) {
+            $project = $app->make('request')->route('project');
+
+            return match ($project?->document_provider) {
+                DocumentProvider::M365 => $app->make(M365StorageService::class),
+                default                => $app->make(GarageStorageService::class),
+            };
+        });
+
+        $this->app->bind(DocumentEditorDriver::class, function ($app) {
+            $project = $app->make('request')->route('project');
+
+            return match ($project?->document_provider) {
+                DocumentProvider::M365 => $app->make(M365EditorService::class),
+                default                => null, // OnlyOfficeEditorService registered in #107
+            };
+        });
+    }
+}
