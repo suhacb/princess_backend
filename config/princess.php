@@ -47,6 +47,7 @@ return [
 
     'garage' => [
         'admin_url'         => env('GARAGE_ADMIN_URL', 'http://garage:3903'),
+        'admin_token'       => env('GARAGE_ADMIN_TOKEN', ''),
         's3_endpoint'       => env('AWS_ENDPOINT', 'http://garage:3900'),
         'public_endpoint'   => env('GARAGE_PUBLIC_ENDPOINT'),
         'access_key_id'     => env('GARAGE_ACCESS_KEY_ID'),

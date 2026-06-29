@@ -11,6 +11,7 @@ class GarageAdminClient implements GarageAdminClientContract
 {
     public function __construct(
         private readonly string $adminUrl,
+        private readonly string $adminToken,
     ) {}
 
     public function ping(): bool
@@ -152,7 +153,7 @@ class GarageAdminClient implements GarageAdminClientContract
 
     private function get(string $path): array
     {
-        $response = Http::timeout(10)->get("{$this->adminUrl}{$path}");
+        $response = Http::timeout(10)->withToken($this->adminToken)->get("{$this->adminUrl}{$path}");
 
         if (! $response->successful()) {
             throw new RuntimeException(
@@ -165,7 +166,7 @@ class GarageAdminClient implements GarageAdminClientContract
 
     private function post(string $path, array $body): array
     {
-        $response = Http::timeout(10)->post("{$this->adminUrl}{$path}", $body);
+        $response = Http::timeout(10)->withToken($this->adminToken)->post("{$this->adminUrl}{$path}", $body);
 
         if (! $response->successful()) {
             throw new RuntimeException(
