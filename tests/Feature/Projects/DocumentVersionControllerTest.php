@@ -76,7 +76,8 @@ class DocumentVersionControllerTest extends TestCase
             ->assertOk()
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.version_number', 1)
-            ->assertJsonPath('data.1.version_number', 2);
+            ->assertJsonPath('data.1.version_number', 2)
+            ->assertJsonStructure(['data', 'meta', 'links']);
     }
 
     public function test_index_returns_empty_for_document_without_versions(): void
@@ -197,9 +198,29 @@ class DocumentVersionControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_revert_forbidden_for_non_member(): void
+    {
+        $v1      = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $stranger = User::factory()->create(['person_id' => Person::factory()->create()->id]);
+
+        $this->actingAs($stranger)
+            ->postJson($this->revertUrl($v1))
+            ->assertForbidden();
+    }
+
+    public function test_revert_returns_404_for_document_from_another_project(): void
+    {
+        $other      = Project::factory()->create(['created_by' => $this->person->id]);
+        $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
+        $v1         = DocumentVersion::factory()->create(['document_id' => $foreignDoc->id, 'version_number' => 1, 's3_key' => 'k1', 'created_by' => $this->person->id]);
+
+        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/versions/{$v1->id}/revert")
+            ->assertNotFound();
+    }
+
     public function test_revert_returns_404_for_version_from_another_document(): void
     {
-        $otherDoc     = QaDocument::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+        $otherDoc       = QaDocument::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
         $foreignVersion = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1', 'document_id' => $otherDoc->id]);
 
         $this->postJson($this->revertUrl($foreignVersion))->assertNotFound();

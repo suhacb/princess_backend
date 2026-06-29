@@ -16,9 +16,9 @@ use Illuminate\Support\Facades\DB;
 class DocumentVersionController extends Controller
 {
     /**
-     * List version history for a document (oldest first).
+     * List paginated version history for a document (oldest first).
      *
-     * @response {"data": [{"id": 1, "version_number": 1, "file_name": "Plan v1.docx"}]}
+     * @response {"data": [{"id": 1, "version_number": 1, "file_name": "Plan v1.docx"}], "meta": {}, "links": {}}
      */
     public function index(Project $project, QaDocument $qaDocument): AnonymousResourceCollection
     {
@@ -26,7 +26,7 @@ class DocumentVersionController extends Controller
 
         abort_if($qaDocument->project_id !== $project->id, 404);
 
-        $versions = $qaDocument->versions()->with('createdBy')->get();
+        $versions = $qaDocument->versions()->with('createdBy')->paginate(25);
 
         return DocumentVersionResource::collection($versions);
     }
