@@ -92,25 +92,28 @@ class TemplateService
             return null;
         }
 
-        $project = $document->project;
-
-        // Read the template file from the appropriate source.
-        $contents = $resolved->templateProjectId !== null
-            ? $this->storage->get($project, $resolved->s3Key)
-            : $this->storage->getFromTemplates($resolved->s3Key);
-
+        $project  = $document->project;
         $destKey  = "documents/{$document->id}/versions/1/original.docx";
         $fileName = basename($resolved->s3Key);
 
-        return DB::transaction(function () use ($project, $document, $contents, $destKey, $fileName) {
-            $this->storage->put($project, $destKey, $contents);
+        return DB::transaction(function () use ($project, $document, $resolved, $destKey, $fileName) {
+            if ($resolved->templateProjectId !== null) {
+                // Same-project template: single S3 copy, no download/re-upload.
+                $this->storage->copy($project, $resolved->s3Key, $destKey);
+                $fileSize = $this->storage->size($project, $destKey);
+            } else {
+                // Global template lives in the templates bucket; stream it across.
+                $contents = $this->storage->getFromTemplates($resolved->s3Key);
+                $this->storage->put($project, $destKey, $contents);
+                $fileSize = strlen($contents);
+            }
 
             $version = DocumentVersion::create([
                 'document_id'     => $document->id,
                 'version_number'  => 1,
                 's3_key'          => $destKey,
                 'file_name'       => $fileName,
-                'file_size_bytes' => strlen($contents),
+                'file_size_bytes' => $fileSize,
                 'comment'         => 'Applied from template',
                 'created_by'      => $document->created_by,
             ]);

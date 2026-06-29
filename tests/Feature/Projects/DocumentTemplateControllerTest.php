@@ -124,7 +124,7 @@ class DocumentTemplateControllerTest extends TestCase
     public function test_index_nests_children_under_parent(): void
     {
         $parent = $this->makeTemplate(['name' => 'Parent']);
-        $this->makeTemplate(['name' => 'Child', 'parent_id' => $parent->id]);
+        $this->makeTemplate(['name' => 'Child', 'category' => 'reporting', 'parent_id' => $parent->id]);
 
         $data = $this->getJson($this->indexUrl())->assertOk()->json('data');
 
@@ -229,6 +229,7 @@ class DocumentTemplateControllerTest extends TestCase
 
         $this->postJson($this->storeUrl(), [
             'name'      => 'Child',
+            'category'  => 'reporting',
             'parent_id' => $parent->id,
         ])
             ->assertCreated()
@@ -287,7 +288,7 @@ class DocumentTemplateControllerTest extends TestCase
     public function test_destroy_force_cascades_to_children(): void
     {
         $parent = $this->makeTemplate(['name' => 'Parent']);
-        $child  = $this->makeTemplate(['name' => 'Child', 'parent_id' => $parent->id]);
+        $child  = $this->makeTemplate(['name' => 'Child', 'category' => 'reporting', 'parent_id' => $parent->id]);
 
         $this->deleteJson($this->destroyUrl($parent, ['force' => true]))->assertNoContent();
 
@@ -298,7 +299,7 @@ class DocumentTemplateControllerTest extends TestCase
     public function test_destroy_without_force_does_not_cascade(): void
     {
         $parent = $this->makeTemplate(['name' => 'Parent']);
-        $child  = $this->makeTemplate(['name' => 'Child', 'parent_id' => $parent->id]);
+        $child  = $this->makeTemplate(['name' => 'Child', 'category' => 'reporting', 'parent_id' => $parent->id]);
 
         $this->deleteJson($this->destroyUrl($parent))->assertNoContent();
 
@@ -371,5 +372,74 @@ class DocumentTemplateControllerTest extends TestCase
         $this->actingAs($observer)
             ->postJson($this->uploadUrl($template), ['file' => $this->fakeDocx()])
             ->assertForbidden();
+    }
+
+    // =========================================================================
+    // Additional gap coverage
+    // =========================================================================
+
+    public function test_store_with_category_and_type(): void
+    {
+        $this->postJson($this->storeUrl(), [
+            'name'     => 'Highlight Report',
+            'category' => 'reporting',
+            'type'     => 'highlight_report',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.category', 'reporting')
+            ->assertJsonPath('data.type', 'highlight_report');
+    }
+
+    public function test_store_rejects_invalid_parent_id(): void
+    {
+        $this->postJson($this->storeUrl(), ['name' => 'Child', 'parent_id' => 99999])
+            ->assertUnprocessable();
+    }
+
+    public function test_store_rejects_duplicate_scope(): void
+    {
+        $this->makeTemplate(['category' => 'reporting', 'type' => 'highlight_report']);
+
+        $this->postJson($this->storeUrl(), [
+            'name'     => 'Duplicate',
+            'category' => 'reporting',
+            'type'     => 'highlight_report',
+        ])->assertUnprocessable();
+    }
+
+    public function test_update_rejects_duplicate_scope(): void
+    {
+        $this->makeTemplate(['category' => 'reporting', 'type' => null]);
+        $target = $this->makeTemplate(['category' => 'planning', 'type' => null]);
+
+        $this->putJson($this->updateUrl($target), ['category' => 'reporting'])
+            ->assertUnprocessable();
+    }
+
+    public function test_index_does_not_leak_other_projects_templates(): void
+    {
+        $other        = Project::factory()->create(['created_by' => $this->person->id]);
+        $foreignTempl = DocumentTemplate::create([
+            'project_id' => $other->id,
+            'name'       => 'Foreign Template',
+            'settings'   => [],
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->makeTemplate(['name' => 'My Template']);
+
+        $data  = $this->getJson($this->indexUrl())->assertOk()->json('data');
+        $names = collect($data)->pluck('name');
+
+        $this->assertTrue($names->contains('My Template'));
+        $this->assertFalse($names->contains('Foreign Template'));
+    }
+
+    public function test_upload_requires_file(): void
+    {
+        $template = $this->makeTemplate();
+
+        $this->postJson($this->uploadUrl($template), [])
+            ->assertUnprocessable();
     }
 }

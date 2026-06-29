@@ -199,7 +199,7 @@ class TemplateServiceTest extends TestCase
         $this->assertNull($result);
     }
 
-    public function test_apply_to_document_creates_version_from_project_template(): void
+    public function test_apply_to_document_uses_copy_for_project_template(): void
     {
         $person   = \App\Models\Person::factory()->create();
         $document = QaDocument::factory()->create([
@@ -214,19 +214,22 @@ class TemplateServiceTest extends TestCase
         ]);
 
         $storage = $this->createMock(GarageStorageService::class);
-        $storage->expects($this->once())->method('get')
+        $storage->expects($this->once())->method('copy')
             ->with(
                 $this->callback(fn ($p) => $p->id === $this->project->id),
                 'templates/1/original.docx',
-            )
-            ->willReturn('fake-content');
-        $storage->expects($this->once())->method('put');
+                $this->stringContains('documents/'),
+            );
+        $storage->expects($this->once())->method('size')->willReturn(12);
+        $storage->expects($this->never())->method('get');
+        $storage->expects($this->never())->method('put');
 
         $service = new TemplateService($storage);
         $version = $service->applyToDocument($document->fresh()->load('project'));
 
         $this->assertNotNull($version);
         $this->assertSame(1, $version->version_number);
+        $this->assertSame(12, $version->file_size_bytes);
         $this->assertSame('Applied from template', $version->comment);
 
         $this->assertDatabaseHas('qa_documents', [
@@ -252,10 +255,29 @@ class TemplateServiceTest extends TestCase
         $storage = $this->createMock(GarageStorageService::class);
         $storage->expects($this->once())->method('getFromTemplates')->with('abc/original.docx')->willReturn('fake-content');
         $storage->expects($this->once())->method('put');
+        $storage->expects($this->never())->method('copy');
         $storage->expects($this->never())->method('get');
 
         $service = new TemplateService($storage);
-        $service->applyToDocument($document->fresh()->load('project'));
+        $version = $service->applyToDocument($document->fresh()->load('project'));
+
+        $this->assertSame(12, $version->file_size_bytes); // strlen('fake-content')
+    }
+
+    // -------------------------------------------------------------------------
+    // resolve — duplicate priority guard
+    // -------------------------------------------------------------------------
+
+    public function test_resolve_with_two_root_templates_for_same_project_still_returns_result(): void
+    {
+        // The DB unique index prevents this in production, but the service must
+        // not crash if somehow two templates end up at the same priority level.
+        // keyBy() silently keeps the last one, so we just assert the call doesn't throw.
+        $this->makeTemplate(['project_id' => null, 'settings' => ['font' => 'Arial']]);
+
+        $result = $this->service->resolve($this->project, 'reporting', 'highlight_report');
+
+        $this->assertInstanceOf(ResolvedTemplate::class, $result);
     }
 
     // -------------------------------------------------------------------------
