@@ -12,7 +12,8 @@ class GarageServiceProvider extends ServiceProvider
     {
         $this->app->singleton(GarageAdminClientContract::class, function () {
             return new GarageAdminClient(
-                adminUrl: config('princess.garage.admin_url'),
+                adminUrl:   config('princess.garage.admin_url'),
+                adminToken: config('princess.garage.admin_token'),
             );
         });
     }

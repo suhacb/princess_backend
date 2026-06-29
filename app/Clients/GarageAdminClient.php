@@ -11,6 +11,7 @@ class GarageAdminClient implements GarageAdminClientContract
 {
     public function __construct(
         private readonly string $adminUrl,
+        private readonly string $adminToken,
     ) {}
 
     public function ping(): bool
@@ -48,7 +49,13 @@ class GarageAdminClient implements GarageAdminClientContract
     {
         $layout = $this->get('/v1/layout');
 
-        return isset($layout['roles'][$nodeId]);
+        foreach ($layout['roles'] ?? [] as $role) {
+            if (($role['id'] ?? '') === $nodeId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function applyLayout(string $nodeId, string $zone, int $capacityBytes): void
@@ -86,7 +93,8 @@ class GarageAdminClient implements GarageAdminClientContract
 
         foreach ($keys as $key) {
             if (($key['name'] ?? '') === $name) {
-                return $key;
+                // List endpoint returns 'id'; normalize to match the create-key response shape.
+                return ['accessKeyId' => $key['id'], 'name' => $key['name']];
             }
         }
 
@@ -152,7 +160,7 @@ class GarageAdminClient implements GarageAdminClientContract
 
     private function get(string $path): array
     {
-        $response = Http::timeout(10)->get("{$this->adminUrl}{$path}");
+        $response = Http::timeout(10)->withToken($this->adminToken)->get("{$this->adminUrl}{$path}");
 
         if (! $response->successful()) {
             throw new RuntimeException(
@@ -165,7 +173,7 @@ class GarageAdminClient implements GarageAdminClientContract
 
     private function post(string $path, array $body): array
     {
-        $response = Http::timeout(10)->post("{$this->adminUrl}{$path}", $body);
+        $response = Http::timeout(10)->withToken($this->adminToken)->post("{$this->adminUrl}{$path}", $body);
 
         if (! $response->successful()) {
             throw new RuntimeException(
