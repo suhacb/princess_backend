@@ -79,7 +79,7 @@ class ExceptionReportController extends Controller
     {
         $this->authorize('view', [ExceptionReport::class, $project, $exceptionReport]);
 
-        return new ExceptionReportResource($exceptionReport->load(['submittedBy', 'decidedBy']));
+        return new ExceptionReportResource($exceptionReport->load(['document', 'submittedBy', 'decidedBy']));
     }
 
     /**

@@ -70,7 +70,7 @@ class CheckpointReportController extends Controller
     {
         $this->authorize('view', [CheckpointReport::class, $project, $checkpointReport]);
 
-        return new CheckpointReportResource($checkpointReport->load(['submittedBy', 'acknowledgedBy', 'workPackage']));
+        return new CheckpointReportResource($checkpointReport->load(['document', 'submittedBy', 'acknowledgedBy', 'workPackage']));
     }
 
     /**

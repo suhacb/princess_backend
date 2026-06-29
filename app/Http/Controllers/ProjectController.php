@@ -78,7 +78,7 @@ class ProjectController extends Controller
         $this->authorize('view', $project);
 
         return new ProjectResource(
-            $project->load(['currentStage', 'stages', 'createdBy', 'updatedBy'])
+            $project->load(['document', 'currentStage', 'stages', 'createdBy', 'updatedBy'])
         );
     }
 

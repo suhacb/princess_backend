@@ -6,6 +6,7 @@ use App\Enums\CheckpointReportStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CheckpointReport extends Model
@@ -59,6 +60,11 @@ class CheckpointReport extends Model
     public function acknowledgedBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'acknowledged_by');
+    }
+
+    public function document(): MorphOne
+    {
+        return $this->morphOne(QaDocument::class, 'documentable');
     }
 
     public function createdBy(): BelongsTo

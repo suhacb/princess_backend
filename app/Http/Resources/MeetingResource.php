@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\QaDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +17,7 @@ class MeetingResource extends JsonResource
             'date_time'            => $this->date_time,
             'agenda'               => $this->agenda,
             'minutes_body'         => $this->minutes_body,
+            'document'             => new QaDocumentResource($this->whenLoaded('document')),
             'attendees'            => PersonResource::collection($this->whenLoaded('attendees')),
             'action_items'         => MeetingActionItemResource::collection($this->whenLoaded('actionItems')),
             'action_items_open'    => $this->when(isset($this->action_items_open), $this->action_items_open),

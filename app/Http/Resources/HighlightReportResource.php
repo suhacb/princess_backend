@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\QaDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -27,6 +28,7 @@ class HighlightReportResource extends JsonResource
             'quality_summary'      => $this->quality_summary,
             'business_case_review' => $this->business_case_review,
             'forecast_finish'      => $this->forecast_finish?->toDateString(),
+            'document'             => new QaDocumentResource($this->whenLoaded('document')),
             'submitted_at'         => $this->submitted_at,
             'submitted_by'         => new PersonResource($this->whenLoaded('submittedBy')),
             'approved_at'          => $this->approved_at,

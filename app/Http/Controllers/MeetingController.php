@@ -75,7 +75,7 @@ class MeetingController extends Controller
     {
         $this->authorize('view', [Meeting::class, $project, $meeting]);
 
-        return new MeetingResource($meeting->load(['attendees', 'actionItems.owner', 'createdBy', 'updatedBy']));
+        return new MeetingResource($meeting->load(['document', 'attendees', 'actionItems.owner', 'createdBy', 'updatedBy']));
     }
 
     /**

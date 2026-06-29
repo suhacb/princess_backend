@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\QaDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +17,7 @@ class ProjectResource extends JsonResource
             'description'   => $this->description,
             'status'        => $this->status,
             'version'       => $this->version,
+            'document'      => new QaDocumentResource($this->whenLoaded('document')),
             'current_stage' => new StageResource($this->whenLoaded('currentStage')),
             'stages'        => StageResource::collection($this->whenLoaded('stages')),
             'stages_count'  => $this->whenCounted('stages'),

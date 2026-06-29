@@ -59,7 +59,7 @@ class StageController extends Controller
     {
         $this->authorize('view', [Stage::class, $project, $stage]);
 
-        return new StageResource($stage->load(['createdBy', 'updatedBy']));
+        return new StageResource($stage->load(['document', 'createdBy', 'updatedBy']));
     }
 
     /**

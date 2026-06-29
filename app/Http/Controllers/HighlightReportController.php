@@ -70,7 +70,7 @@ class HighlightReportController extends Controller
     {
         $this->authorize('view', [HighlightReport::class, $project, $highlightReport]);
 
-        return new HighlightReportResource($highlightReport->load(['submittedBy', 'approvedBy']));
+        return new HighlightReportResource($highlightReport->load(['document', 'submittedBy', 'approvedBy']));
     }
 
     /**

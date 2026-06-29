@@ -25,6 +25,7 @@ use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductFlowController;
 use App\Http\Controllers\DocumentVersionController;
+use App\Http\Controllers\DocumentLinkController;
 use App\Http\Controllers\QaDocumentController;
 use App\Http\Controllers\RequirementController;
 use App\Http\Controllers\WorkPackageController;
@@ -154,6 +155,10 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.qa-documents.download');
     Route::get('projects/{project}/qa-documents/{qaDocument}/editor-config', OnlyOfficeEditorConfigController::class)
         ->name('projects.qa-documents.editor-config');
+    Route::post('projects/{project}/qa-documents/{qaDocument}/link', [DocumentLinkController::class, 'link'])
+        ->name('projects.qa-documents.link');
+    Route::delete('projects/{project}/qa-documents/{qaDocument}/link', [DocumentLinkController::class, 'unlink'])
+        ->name('projects.qa-documents.unlink');
 
     Route::apiResource('projects.test-scenarios', TestScenarioController::class)
         ->parameters(['test-scenarios' => 'testScenario']);
