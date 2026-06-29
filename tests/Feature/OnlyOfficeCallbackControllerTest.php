@@ -19,7 +19,6 @@ class OnlyOfficeCallbackControllerTest extends TestCase
     private const JWT_SECRET  = 'test-secret';
     private const SESSION_KEY = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
-    private DocumentVersion $version;
     private OnlyOfficeClient $client;
 
     protected function setUp(): void
@@ -30,7 +29,7 @@ class OnlyOfficeCallbackControllerTest extends TestCase
         $project  = Project::factory()->create(['created_by' => $person->id]);
         $document = QaDocument::factory()->create(['project_id' => $project->id, 'created_by' => $person->id]);
 
-        $this->version = DocumentVersion::factory()->create([
+        DocumentVersion::factory()->create([
             'document_id'    => $document->id,
             'version_number' => 1,
             's3_key'         => "documents/{$document->id}/versions/" . self::SESSION_KEY . '/original.docx',
@@ -126,6 +125,30 @@ class OnlyOfficeCallbackControllerTest extends TestCase
             ->once();
 
         $this->postJson($this->url(), $payload)->assertOk();
+    }
+
+    public function test_status_6_calls_handle_callback(): void
+    {
+        $payload = $this->signedPayload(['status' => 6, 'key' => self::SESSION_KEY, 'url' => 'https://onlyoffice/force-save']);
+
+        $this->mock(OnlyOfficeEditorService::class)
+            ->shouldReceive('handleCallback')
+            ->once();
+
+        $this->postJson($this->url(), $payload)->assertOk();
+    }
+
+    public function test_unknown_status_is_ignored_and_returns_error_zero(): void
+    {
+        $payload = $this->signedPayload(['status' => 99, 'key' => self::SESSION_KEY]);
+
+        $this->mock(OnlyOfficeEditorService::class)
+            ->shouldReceive('handleCallback')
+            ->once(); // service is still called; it silently ignores status 99
+
+        $this->postJson($this->url(), $payload)
+            ->assertOk()
+            ->assertJson(['error' => 0]);
     }
 
     public function test_key_mismatch_skips_handle_callback(): void

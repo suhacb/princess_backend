@@ -73,6 +73,16 @@ class OnlyOfficeClientTest extends TestCase
         $this->assertNull($config['document']['url']);
     }
 
+    public function test_generate_editor_config_embeds_user_info(): void
+    {
+        [$document, $version, $person] = $this->makeModels();
+
+        $config = $this->client->generateEditorConfig($document, $version, $person, 'https://cb', null);
+
+        $this->assertSame('42', $config['editorConfig']['user']['id']);
+        $this->assertSame('Alice', $config['editorConfig']['user']['name']);
+    }
+
     // -------------------------------------------------------------------------
     // parseCallback
     // -------------------------------------------------------------------------
@@ -120,9 +130,7 @@ class OnlyOfficeClientTest extends TestCase
     public function test_parse_callback_throws_when_signed_with_wrong_secret(): void
     {
         $payload = ['status' => 2, 'key' => 'uuid-key', 'url' => 'https://x'];
-
-        $wrongClient = new OnlyOfficeClient('wrong-secret', 'http://onlyoffice');
-        $token       = $this->signWith($payload, 'wrong-secret');
+        $token   = $this->signWith($payload, 'wrong-secret');
 
         $this->expectException(InvalidArgumentException::class);
 
