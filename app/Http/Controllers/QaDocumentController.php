@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Documents\Metadata\DocumentMetadataFactory;
 use App\Enums\QaDocumentStatus;
 use App\Enums\QaDocumentType;
 use App\Enums\RequirementStatus;
@@ -22,10 +23,11 @@ class QaDocumentController extends Controller
     /**
      * List QA documents for a project.
      *
-     * @queryParam type string Filter by type (requirements_specification, test_plan, test_report). Example: test_plan
+     * @queryParam type string Filter by type. Example: meeting_minutes
+     * @queryParam category string Filter by category (initiation, planning, reporting, register, qa, meeting, general). Example: reporting
      * @queryParam status string Filter by status (draft, in_review, confirmed, superseded). Example: confirmed
      *
-     * @response {"data": [{"id": 1, "type": "test_plan", "status": "draft"}]}
+     * @response {"data": [{"id": 1, "type": "highlight_report", "category": "reporting", "status": "draft"}]}
      */
     public function index(Request $request, Project $project): AnonymousResourceCollection
     {
@@ -35,6 +37,9 @@ class QaDocumentController extends Controller
 
         if ($request->filled('type')) {
             $query->where('type', $request->type);
+        }
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
         }
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -46,7 +51,7 @@ class QaDocumentController extends Controller
     /**
      * Create a QA document.
      *
-     * @response 201 {"data": {"id": 1, "type": "test_plan", "status": "draft"}}
+     * @response 201 {"data": {"id": 1, "type": "highlight_report", "category": "reporting", "status": "draft"}}
      */
     public function store(QaDocumentRequest $request, Project $project): QaDocumentResource
     {
@@ -57,6 +62,13 @@ class QaDocumentController extends Controller
 
         $requirementIds = $validated['requirement_ids'] ?? [];
         unset($validated['requirement_ids']);
+
+        // Resolve metadata through factory (validates shape, normalises).
+        $metadata = DocumentMetadataFactory::make($type, $validated['metadata'] ?? [])->toArray();
+        $validated['metadata'] = $metadata ?: null;
+
+        // Resolve documentable alias to model class.
+        $validated = $this->resolveDocumentable($validated);
 
         $this->assertItemIdsValid($project, $type, $requirementIds);
         $this->assertSupersedesValid($project, $validated['supersedes_id'] ?? null);
@@ -76,13 +88,13 @@ class QaDocumentController extends Controller
     /**
      * Get a QA document with its linked requirements.
      *
-     * @response {"data": {"id": 1, "type": "test_plan", "requirements": []}}
+     * @response {"data": {"id": 1, "type": "highlight_report", "category": "reporting", "requirements": []}}
      */
     public function show(Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('view', [QaDocument::class, $project, $qaDocument]);
 
-        return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy']));
+        return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable']));
     }
 
     /**
@@ -104,6 +116,15 @@ class QaDocumentController extends Controller
         $validated      = $request->validated();
         $requirementIds = $validated['requirement_ids'] ?? null;
         unset($validated['requirement_ids']);
+
+        // Resolve metadata if provided.
+        if (array_key_exists('metadata', $validated)) {
+            $metadata = DocumentMetadataFactory::make($qaDocument->type, $validated['metadata'] ?? [])->toArray();
+            $validated['metadata'] = $metadata ?: null;
+        }
+
+        // Resolve documentable alias to model class.
+        $validated = $this->resolveDocumentable($validated);
 
         if ($requirementIds !== null) {
             $this->assertItemIdsValid($project, $qaDocument->type, $requirementIds);
@@ -211,7 +232,6 @@ class QaDocumentController extends Controller
                     });
             }
 
-            // Supersede the old document
             if ($qaDocument->supersedes_id) {
                 QaDocument::where('id', $qaDocument->supersedes_id)
                     ->update(['status' => QaDocumentStatus::Superseded->value]);
@@ -226,6 +246,16 @@ class QaDocumentController extends Controller
         });
 
         return new QaDocumentResource($qaDocument->fresh()->load(['requirements', 'confirmedBy']));
+    }
+
+    private function resolveDocumentable(array $validated): array
+    {
+        if (isset($validated['documentable_type'])) {
+            $types = QaDocumentRequest::documentableTypes();
+            $validated['documentable_type'] = $types[$validated['documentable_type']] ?? $validated['documentable_type'];
+        }
+
+        return $validated;
     }
 
     private function assertItemIdsValid(Project $project, QaDocumentType $type, array $requirementIds): void
