@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Stage extends Model
@@ -68,6 +69,11 @@ class Stage extends Model
     public function plans(): HasMany
     {
         return $this->hasMany(Plan::class);
+    }
+
+    public function document(): MorphOne
+    {
+        return $this->morphOne(QaDocument::class, 'documentable');
     }
 
     public function createdBy(): BelongsTo

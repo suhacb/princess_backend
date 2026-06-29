@@ -9,15 +9,19 @@ use App\Models\CheckpointReport;
 use App\Models\ExceptionReport;
 use App\Models\HighlightReport;
 use App\Models\Meeting;
+use App\Models\Project;
+use App\Models\Stage;
 use Illuminate\Validation\Rule;
 
 class QaDocumentRequest extends DynamicRequest
 {
     private const DOCUMENTABLE_TYPES = [
-        'meeting'          => Meeting::class,
-        'highlight_report' => HighlightReport::class,
+        'meeting'           => Meeting::class,
+        'highlight_report'  => HighlightReport::class,
         'checkpoint_report' => CheckpointReport::class,
-        'exception_report' => ExceptionReport::class,
+        'exception_report'  => ExceptionReport::class,
+        'stage'             => Stage::class,
+        'project'           => Project::class,
     ];
 
     public static function documentableTypes(): array

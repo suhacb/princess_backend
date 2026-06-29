@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\QaDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,6 +24,7 @@ class CheckpointReportResource extends JsonResource
             'issues_this_period'   => $this->issues_this_period,
             'issues_forecast'      => $this->issues_forecast,
             'quality_notes'        => $this->quality_notes,
+            'document'             => new QaDocumentResource($this->whenLoaded('document')),
             'submitted_at'         => $this->submitted_at,
             'submitted_by'         => new PersonResource($this->whenLoaded('submittedBy')),
             'acknowledged_at'      => $this->acknowledged_at,

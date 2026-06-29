@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\QaDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +23,7 @@ class StageResource extends JsonResource
             'planned_end'   => $this->planned_end?->toDateString(),
             'actual_start'  => $this->actual_start?->toDateString(),
             'actual_end'    => $this->actual_end?->toDateString(),
+            'document'    => new QaDocumentResource($this->whenLoaded('document')),
             'tolerances'  => [
                 'time'    => $this->tolerance_time,
                 'cost'    => $this->tolerance_cost,

@@ -6,6 +6,7 @@ use App\Enums\HighlightReportStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class HighlightReport extends Model
@@ -64,6 +65,11 @@ class HighlightReport extends Model
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(Person::class, 'approved_by');
+    }
+
+    public function document(): MorphOne
+    {
+        return $this->morphOne(QaDocument::class, 'documentable');
     }
 
     public function createdBy(): BelongsTo

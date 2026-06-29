@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Http\Resources\QaDocumentResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,6 +23,7 @@ class ExceptionReportResource extends JsonResource
             'options'        => $this->options,
             'recommendation' => $this->recommendation,
             'status'         => $this->status,
+            'document'       => new QaDocumentResource($this->whenLoaded('document')),
             'board_decision' => $this->board_decision,
             'decided_at'     => $this->decided_at,
             'decided_by'     => new PersonResource($this->whenLoaded('decidedBy')),

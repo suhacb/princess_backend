@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Project extends Model
@@ -189,6 +190,11 @@ class Project extends Model
     public function exceptionReports(): HasMany
     {
         return $this->hasMany(ExceptionReport::class);
+    }
+
+    public function document(): MorphOne
+    {
+        return $this->morphOne(QaDocument::class, 'documentable');
     }
 
     public function createdBy(): BelongsTo
