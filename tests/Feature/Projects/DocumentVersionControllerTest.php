@@ -357,6 +357,36 @@ class DocumentVersionControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_upload_accepts_odt_file(): void
+    {
+        $odt = UploadedFile::fake()->create('minutes.odt', 256, 'application/vnd.oasis.opendocument.text');
+
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $this->post($this->uploadUrl(), ['file' => $odt])
+            ->assertCreated()
+            ->assertJsonPath('data.file_name', 'minutes.odt');
+    }
+
+    public function test_upload_without_file_returns_422(): void
+    {
+        $this->post($this->uploadUrl(), ['comment' => 'no file attached'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    }
+
+    public function test_upload_stores_file_size_bytes(): void
+    {
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $response = $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])->assertCreated();
+
+        $this->assertDatabaseHas('document_versions', [
+            'id'              => $response->json('data.id'),
+            'file_size_bytes' => $response->json('data.file_size_bytes'),
+        ]);
+    }
+
     public function test_upload_returns_404_for_document_from_another_project(): void
     {
         $other      = Project::factory()->create(['created_by' => $this->person->id]);
@@ -434,5 +464,24 @@ class DocumentVersionControllerTest extends TestCase
 
         $this->get("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/download")
             ->assertNotFound();
+    }
+
+    public function test_download_allowed_for_read_only_role(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['current_version_id' => $v1->id]);
+
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->mock(DocumentStorageDriver::class)
+            ->shouldReceive('temporaryUrl')
+            ->once()
+            ->andReturn('https://s3.example.com/presigned');
+
+        $this->actingAs($observer)
+            ->get($this->downloadUrl())
+            ->assertRedirect('https://s3.example.com/presigned');
     }
 }
