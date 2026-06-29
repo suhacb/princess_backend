@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AcceptanceCriterionController;
+use App\Http\Controllers\OnlyOfficeCallbackController;
+use App\Http\Controllers\OnlyOfficeEditorConfigController;
 use App\Http\Controllers\E2eController;
 use App\Http\Controllers\CheckpointReportController;
 use App\Http\Controllers\ExceptionReportController;
@@ -48,6 +50,9 @@ Route::prefix('auth')->name('auth.')->group(function () {
 });
 
 Route::middleware('e2e.only')->post('e2e/reset', [E2eController::class, 'reset'])->name('e2e.reset');
+
+Route::post('onlyoffice/callback/{key}', OnlyOfficeCallbackController::class)
+    ->name('onlyoffice.callback');
 
 Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects', ProjectController::class);
@@ -146,6 +151,8 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.qa-documents.upload');
     Route::get('projects/{project}/qa-documents/{qaDocument}/download', [DocumentVersionController::class, 'download'])
         ->name('projects.qa-documents.download');
+    Route::get('projects/{project}/qa-documents/{qaDocument}/editor-config', OnlyOfficeEditorConfigController::class)
+        ->name('projects.qa-documents.editor-config');
 
     Route::apiResource('projects.test-scenarios', TestScenarioController::class)
         ->parameters(['test-scenarios' => 'testScenario']);
