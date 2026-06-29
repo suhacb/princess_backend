@@ -151,6 +151,11 @@ class Project extends Model
         return $this->hasMany(QaDocument::class);
     }
 
+    public function templates(): HasMany
+    {
+        return $this->hasMany(DocumentTemplate::class);
+    }
+
     public function testScenarios(): HasMany
     {
         return $this->hasMany(TestScenario::class);
