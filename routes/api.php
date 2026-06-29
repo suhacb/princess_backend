@@ -142,6 +142,10 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.qa-documents.versions.index');
     Route::post('projects/{project}/qa-documents/{qaDocument}/versions/{version}/revert', [DocumentVersionController::class, 'revert'])
         ->name('projects.qa-documents.versions.revert');
+    Route::post('projects/{project}/qa-documents/{qaDocument}/upload', [DocumentVersionController::class, 'upload'])
+        ->name('projects.qa-documents.upload');
+    Route::get('projects/{project}/qa-documents/{qaDocument}/download', [DocumentVersionController::class, 'download'])
+        ->name('projects.qa-documents.download');
 
     Route::apiResource('projects.test-scenarios', TestScenarioController::class)
         ->parameters(['test-scenarios' => 'testScenario']);

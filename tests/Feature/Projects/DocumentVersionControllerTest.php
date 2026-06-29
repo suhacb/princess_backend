@@ -4,12 +4,14 @@ namespace Tests\Feature\Projects;
 
 use App\Contracts\DocumentStorageDriver;
 use App\Enums\ProjectRole;
+use App\Enums\QaDocumentStatus;
 use App\Models\DocumentVersion;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\QaDocument;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class DocumentVersionControllerTest extends TestCase
@@ -53,6 +55,22 @@ class DocumentVersionControllerTest extends TestCase
     private function revertUrl(DocumentVersion $version): string
     {
         return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/versions/{$version->id}/revert";
+    }
+
+    private function uploadUrl(): string
+    {
+        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/upload";
+    }
+
+    private function downloadUrl(?int $versionId = null): string
+    {
+        $url = "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/download";
+        return $versionId !== null ? "{$url}?version={$versionId}" : $url;
+    }
+
+    private function fakeDocx(string $name = 'plan.docx'): UploadedFile
+    {
+        return UploadedFile::fake()->create($name, 512, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     }
 
     private function makeVersion(array $attributes = []): DocumentVersion
@@ -249,5 +267,221 @@ class DocumentVersionControllerTest extends TestCase
         $this->expectExceptionMessage('immutable');
 
         $v1->delete();
+    }
+
+    // -------------------------------------------------------------------------
+    // upload
+    // -------------------------------------------------------------------------
+
+    public function test_upload_creates_new_version(): void
+    {
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $this->post($this->uploadUrl(), ['file' => $this->fakeDocx(), 'comment' => 'Initial upload'])
+            ->assertCreated()
+            ->assertJsonPath('data.version_number', 1)
+            ->assertJsonPath('data.file_name', 'plan.docx')
+            ->assertJsonPath('data.comment', 'Initial upload');
+    }
+
+    public function test_upload_updates_current_version_id(): void
+    {
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $response = $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])->assertCreated();
+
+        $this->assertDatabaseHas('qa_documents', [
+            'id'                 => $this->document->id,
+            'current_version_id' => $response->json('data.id'),
+        ]);
+    }
+
+    public function test_upload_increments_version_number(): void
+    {
+        $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->makeVersion(['version_number' => 2, 's3_key' => 'k2']);
+
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
+            ->assertCreated()
+            ->assertJsonPath('data.version_number', 3);
+    }
+
+    public function test_upload_stores_key_with_uuid_path(): void
+    {
+        $this->mock(DocumentStorageDriver::class)
+            ->shouldReceive('put')
+            ->withArgs(function (Project $project, string $key) {
+                return $project->is($this->project)
+                    && preg_match('#^documents/\d+/versions/[0-9a-f-]{36}/original\.docx$#', $key) === 1;
+            })
+            ->once();
+
+        $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])->assertCreated();
+    }
+
+    public function test_upload_rejected_for_confirmed_document(): void
+    {
+        $this->document->update(['status' => QaDocumentStatus::Confirmed->value]);
+
+        $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
+            ->assertForbidden();
+    }
+
+    public function test_upload_rejected_for_invalid_file_type(): void
+    {
+        $pdf = UploadedFile::fake()->create('report.pdf', 512, 'application/pdf');
+
+        $this->post($this->uploadUrl(), ['file' => $pdf])
+            ->assertUnprocessable();
+    }
+
+    public function test_upload_forbidden_for_read_only_role(): void
+    {
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->actingAs($observer)
+            ->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
+            ->assertForbidden();
+    }
+
+    public function test_upload_forbidden_for_non_member(): void
+    {
+        $stranger = User::factory()->create(['person_id' => Person::factory()->create()->id]);
+
+        $this->actingAs($stranger)
+            ->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
+            ->assertForbidden();
+    }
+
+    public function test_upload_accepts_odt_file(): void
+    {
+        $odt = UploadedFile::fake()->create('minutes.odt', 256, 'application/vnd.oasis.opendocument.text');
+
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $this->post($this->uploadUrl(), ['file' => $odt])
+            ->assertCreated()
+            ->assertJsonPath('data.file_name', 'minutes.odt');
+    }
+
+    public function test_upload_without_file_returns_422(): void
+    {
+        $this->post($this->uploadUrl(), ['comment' => 'no file attached'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    }
+
+    public function test_upload_stores_file_size_bytes(): void
+    {
+        $this->mock(DocumentStorageDriver::class)->shouldReceive('put')->once();
+
+        $response = $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])->assertCreated();
+
+        $this->assertDatabaseHas('document_versions', [
+            'id'              => $response->json('data.id'),
+            'file_size_bytes' => $response->json('data.file_size_bytes'),
+        ]);
+    }
+
+    public function test_upload_returns_404_for_document_from_another_project(): void
+    {
+        $other      = Project::factory()->create(['created_by' => $this->person->id]);
+        $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
+
+        $this->post("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/upload", ['file' => $this->fakeDocx()])
+            ->assertNotFound();
+    }
+
+    // -------------------------------------------------------------------------
+    // download
+    // -------------------------------------------------------------------------
+
+    public function test_download_redirects_to_presigned_url(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'documents/1/versions/uuid/original.docx']);
+        $this->document->update(['current_version_id' => $v1->id]);
+
+        $this->mock(DocumentStorageDriver::class)
+            ->shouldReceive('temporaryUrl')
+            ->once()
+            ->andReturn('https://s3.example.com/presigned-url');
+
+        $this->get($this->downloadUrl())
+            ->assertRedirect('https://s3.example.com/presigned-url');
+    }
+
+    public function test_download_uses_specific_version_when_query_param_provided(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $v2 = $this->makeVersion(['version_number' => 2, 's3_key' => 'k2']);
+        $this->document->update(['current_version_id' => $v2->id]);
+
+        $this->mock(DocumentStorageDriver::class)
+            ->shouldReceive('temporaryUrl')
+            ->withArgs(function (Project $project, string $key) use ($v1) {
+                return $key === $v1->s3_key;
+            })
+            ->once()
+            ->andReturn('https://s3.example.com/v1-url');
+
+        $this->get($this->downloadUrl($v1->id))
+            ->assertRedirect('https://s3.example.com/v1-url');
+    }
+
+    public function test_download_returns_404_when_no_current_version(): void
+    {
+        $this->get($this->downloadUrl())->assertNotFound();
+    }
+
+    public function test_download_returns_404_when_version_from_another_document(): void
+    {
+        $otherDoc      = QaDocument::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+        $foreignVersion = DocumentVersion::factory()->create(['document_id' => $otherDoc->id, 'version_number' => 1, 's3_key' => 'k1', 'created_by' => $this->person->id]);
+
+        $this->get($this->downloadUrl($foreignVersion->id))->assertNotFound();
+    }
+
+    public function test_download_forbidden_for_non_member(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['current_version_id' => $v1->id]);
+
+        $stranger = User::factory()->create(['person_id' => Person::factory()->create()->id]);
+
+        $this->actingAs($stranger)
+            ->get($this->downloadUrl())
+            ->assertForbidden();
+    }
+
+    public function test_download_returns_404_for_document_from_another_project(): void
+    {
+        $other      = Project::factory()->create(['created_by' => $this->person->id]);
+        $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
+
+        $this->get("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/download")
+            ->assertNotFound();
+    }
+
+    public function test_download_allowed_for_read_only_role(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['current_version_id' => $v1->id]);
+
+        $observerPerson = Person::factory()->create();
+        $observer       = User::factory()->create(['person_id' => $observerPerson->id]);
+        $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
+
+        $this->mock(DocumentStorageDriver::class)
+            ->shouldReceive('temporaryUrl')
+            ->once()
+            ->andReturn('https://s3.example.com/presigned');
+
+        $this->actingAs($observer)
+            ->get($this->downloadUrl())
+            ->assertRedirect('https://s3.example.com/presigned');
     }
 }

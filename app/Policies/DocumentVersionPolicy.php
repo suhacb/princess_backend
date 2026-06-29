@@ -2,7 +2,7 @@
 
 namespace App\Policies;
 
-use App\Models\DocumentVersion;
+use App\Enums\QaDocumentStatus;
 use App\Models\Project;
 use App\Models\QaDocument;
 use App\Models\User;
@@ -18,6 +18,19 @@ class DocumentVersionPolicy
     {
         return $document->project_id === $project->id
             && $this->memberCan($user, $project, 'qa:manage');
+    }
+
+    public function upload(User $user, Project $project, QaDocument $document): bool
+    {
+        return $document->project_id === $project->id
+            && $document->status !== QaDocumentStatus::Confirmed
+            && $this->memberCan($user, $project, 'qa:manage');
+    }
+
+    public function download(User $user, Project $project, QaDocument $document): bool
+    {
+        return $document->project_id === $project->id
+            && $this->memberCan($user, $project, 'qa:read');
     }
 
     private function memberCan(User $user, Project $project, string $permission): bool
