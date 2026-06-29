@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Projects;
 
+use App\Enums\DocumentCategory;
 use App\Enums\ProjectRole;
 use App\Enums\QaDocumentStatus;
 use App\Enums\QaDocumentType;
 use App\Enums\RequirementStatus;
+use App\Models\Meeting;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\QaDocument;
@@ -526,5 +528,131 @@ class QaDocumentControllerTest extends TestCase
         $this->actingAs($observer)
             ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
             ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // taxonomy — category auto-population and filtering
+    // -------------------------------------------------------------------------
+
+    public function test_store_auto_populates_category_from_type(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'  => QaDocumentType::HighlightReport->value,
+            'title' => 'June Highlight',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.type', QaDocumentType::HighlightReport->value)
+            ->assertJsonPath('data.category', DocumentCategory::Reporting->value);
+
+        $this->assertDatabaseHas('qa_documents', [
+            'type'     => QaDocumentType::HighlightReport->value,
+            'category' => DocumentCategory::Reporting->value,
+        ]);
+    }
+
+    public function test_index_filters_by_category(): void
+    {
+        $this->makeDocument(['type' => QaDocumentType::HighlightReport->value, 'category' => DocumentCategory::Reporting->value]);
+        $this->makeDocument(['type' => QaDocumentType::RequirementsSpecification->value, 'category' => DocumentCategory::Qa->value]);
+        $this->makeDocument(['type' => QaDocumentType::StagePlan->value, 'category' => DocumentCategory::Planning->value]);
+
+        $this->getJson($this->indexUrl() . '?category=reporting')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.category', DocumentCategory::Reporting->value);
+    }
+
+    public function test_store_all_new_type_values_are_accepted(): void
+    {
+        $newTypes = [
+            QaDocumentType::ProjectBrief,
+            QaDocumentType::MeetingAgenda,
+            QaDocumentType::MeetingMinutes,
+            QaDocumentType::RiskRegister,
+            QaDocumentType::General,
+        ];
+
+        foreach ($newTypes as $type) {
+            $this->postJson($this->indexUrl(), ['type' => $type->value, 'title' => "Doc for {$type->value}"])
+                ->assertCreated("Type {$type->value} should be accepted");
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // taxonomy — metadata
+    // -------------------------------------------------------------------------
+
+    public function test_store_persists_structured_metadata(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'     => QaDocumentType::HighlightReport->value,
+            'title'    => 'June Highlight',
+            'metadata' => [
+                'reporting_period_start' => '2026-06-01',
+                'reporting_period_end'   => '2026-06-30',
+                'board_actions_required' => true,
+            ],
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.metadata.reporting_period_start', '2026-06-01')
+            ->assertJsonPath('data.metadata.board_actions_required', true);
+    }
+
+    public function test_store_rejects_invalid_metadata_date(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'     => QaDocumentType::HighlightReport->value,
+            'title'    => 'June Highlight',
+            'metadata' => [
+                'reporting_period_start' => 'not-a-date',
+            ],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('metadata.reporting_period_start');
+    }
+
+    public function test_store_null_metadata_stored_as_null(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'  => QaDocumentType::General->value,
+            'title' => 'Generic doc',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.metadata', null);
+    }
+
+    // -------------------------------------------------------------------------
+    // taxonomy — documentable link
+    // -------------------------------------------------------------------------
+
+    public function test_store_links_documentable_meeting(): void
+    {
+        $meeting = Meeting::factory()->create(['project_id' => $this->project->id]);
+
+        $this->postJson($this->indexUrl(), [
+            'type'             => QaDocumentType::MeetingMinutes->value,
+            'title'            => 'Board meeting minutes',
+            'documentable_type' => 'meeting',
+            'documentable_id'   => $meeting->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.documentable', null); // not loaded on store index
+
+        $this->assertDatabaseHas('qa_documents', [
+            'documentable_type' => \App\Models\Meeting::class,
+            'documentable_id'   => $meeting->id,
+        ]);
+    }
+
+    public function test_store_rejects_unknown_documentable_type(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'             => QaDocumentType::MeetingMinutes->value,
+            'title'            => 'Bad link',
+            'documentable_type' => 'bogus_model',
+            'documentable_id'   => 1,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('documentable_type');
     }
 }

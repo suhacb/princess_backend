@@ -12,17 +12,19 @@ class QaDocumentFactory extends Factory
 {
     public function definition(): array
     {
+        $type = QaDocumentType::RequirementsSpecification;
+
         return [
-            'project_id'     => Project::factory(),
-            'type'           => QaDocumentType::RequirementsSpecification->value,
-            'title'          => fake()->sentence(4),
-            'version'        => 'v1.0',
-            'description'    => fake()->optional()->paragraph(),
-            'file_name'      => null,
-            'file_reference' => null,
-            'status'         => QaDocumentStatus::Draft->value,
-            'supersedes_id'  => null,
-            'created_by'     => Person::factory(),
+            'project_id'    => Project::factory(),
+            'type'          => $type->value,
+            'category'      => $type->category()->value,
+            'title'         => fake()->sentence(4),
+            'version'       => 'v1.0',
+            'description'   => fake()->optional()->paragraph(),
+            'metadata'      => null,
+            'status'        => QaDocumentStatus::Draft->value,
+            'supersedes_id' => null,
+            'created_by'    => Person::factory(),
         ];
     }
 
