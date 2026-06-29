@@ -621,6 +621,39 @@ class QaDocumentControllerTest extends TestCase
             ->assertJsonPath('data.metadata', null);
     }
 
+    public function test_update_persists_metadata(): void
+    {
+        $doc = $this->makeDocument([
+            'type'     => QaDocumentType::HighlightReport->value,
+            'category' => 'reporting',
+            'metadata' => null,
+        ]);
+
+        $this->putJson($this->documentUrl($doc), [
+            'metadata' => [
+                'reporting_period_start' => '2026-07-01',
+                'reporting_period_end'   => '2026-07-31',
+                'board_actions_required' => false,
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.metadata.reporting_period_start', '2026-07-01')
+            ->assertJsonPath('data.metadata.board_actions_required', false);
+    }
+
+    public function test_update_clears_metadata(): void
+    {
+        $doc = $this->makeDocument([
+            'type'     => QaDocumentType::HighlightReport->value,
+            'category' => 'reporting',
+            'metadata' => ['reporting_period_start' => '2026-07-01'],
+        ]);
+
+        $this->putJson($this->documentUrl($doc), ['metadata' => null])
+            ->assertOk()
+            ->assertJsonPath('data.metadata', null);
+    }
+
     // -------------------------------------------------------------------------
     // taxonomy — documentable link
     // -------------------------------------------------------------------------

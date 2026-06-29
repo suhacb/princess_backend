@@ -24,6 +24,9 @@ return new class extends Migration
                 ->update(['category' => $type->category()->value]);
         }
 
+        // Deprecate file_name and file_reference — columns stay until DOC-10 removes them.
+        DB::table('qa_documents')->update(['file_name' => null, 'file_reference' => null]);
+
         Schema::table('qa_documents', function (Blueprint $table) {
             $table->index(['project_id', 'category']);
         });
