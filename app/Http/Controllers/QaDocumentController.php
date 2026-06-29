@@ -10,6 +10,7 @@ use App\Http\Requests\QaDocument\QaDocumentRequest;
 use App\Http\Resources\QaDocumentResource;
 use App\Models\Project;
 use App\Models\QaDocument;
+use App\Services\Document\TemplateService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
@@ -80,6 +81,12 @@ class QaDocumentController extends Controller
 
         if ($requirementIds) {
             $document->requirements()->sync($requirementIds);
+        }
+
+        try {
+            app(TemplateService::class)->applyToDocument($document);
+        } catch (\Throwable) {
+            // Template application is best-effort; never block document creation.
         }
 
         return new QaDocumentResource($document->load(['requirements']));

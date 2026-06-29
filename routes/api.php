@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcceptanceCriterionController;
+use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\OnlyOfficeCallbackController;
 use App\Http\Controllers\OnlyOfficeEditorConfigController;
 use App\Http\Controllers\E2eController;
@@ -244,6 +245,17 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::apiResource('projects.tasks', TaskController::class);
     Route::get('projects/{project}/tasks/{task}/history', [TaskController::class, 'history'])
         ->name('projects.tasks.history');
+
+    Route::get('projects/{project}/templates', [DocumentTemplateController::class, 'index'])
+        ->name('projects.templates.index');
+    Route::post('projects/{project}/templates', [DocumentTemplateController::class, 'store'])
+        ->name('projects.templates.store');
+    Route::put('projects/{project}/templates/{template}', [DocumentTemplateController::class, 'update'])
+        ->name('projects.templates.update');
+    Route::delete('projects/{project}/templates/{template}', [DocumentTemplateController::class, 'destroy'])
+        ->name('projects.templates.destroy');
+    Route::post('projects/{project}/templates/{template}/upload', [DocumentTemplateController::class, 'upload'])
+        ->name('projects.templates.upload');
 
     Route::get('projects/{project}/audit-trail', [AuditTrailController::class, 'index'])
         ->name('projects.audit-trail');

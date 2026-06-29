@@ -7,12 +7,15 @@ use App\Enums\ProjectRole;
 use App\Enums\QaDocumentStatus;
 use App\Enums\QaDocumentType;
 use App\Enums\RequirementStatus;
+use App\Models\DocumentTemplate;
+use App\Models\DocumentVersion;
 use App\Models\Meeting;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\QaDocument;
 use App\Models\Requirement;
 use App\Models\User;
+use App\Services\Document\GarageStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -687,5 +690,54 @@ class QaDocumentControllerTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('documentable_type');
+    }
+
+    // -------------------------------------------------------------------------
+    // template integration
+    // -------------------------------------------------------------------------
+
+    public function test_store_applies_matching_template_as_version_1(): void
+    {
+        DocumentTemplate::create([
+            'project_id' => $this->project->id,
+            'name'       => 'Requirements Template',
+            'category'   => DocumentCategory::Qa->value,
+            'type'       => QaDocumentType::RequirementsSpecification->value,
+            's3_key'     => 'templates/1/original.docx',
+            'settings'   => [],
+            'created_by' => $this->person->id,
+        ]);
+
+        $storage = $this->createMock(GarageStorageService::class);
+        $storage->method('copy');
+        $storage->method('size')->willReturn(1024);
+        $this->app->instance(GarageStorageService::class, $storage);
+
+        $response = $this->postJson($this->indexUrl(), $this->storePayload([
+            'type' => QaDocumentType::RequirementsSpecification->value,
+        ]))->assertCreated();
+
+        $docId = $response->json('data.id');
+
+        $this->assertDatabaseHas('document_versions', [
+            'document_id'    => $docId,
+            'version_number' => 1,
+            'comment'        => 'Applied from template',
+        ]);
+
+        $this->assertDatabaseHas('qa_documents', [
+            'id'                 => $docId,
+            'current_version_id' => DocumentVersion::where('document_id', $docId)->value('id'),
+        ]);
+    }
+
+    public function test_store_succeeds_even_when_no_matching_template_exists(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload())
+            ->assertCreated();
+
+        $this->assertDatabaseMissing('document_versions', [
+            'comment' => 'Applied from template',
+        ]);
     }
 }

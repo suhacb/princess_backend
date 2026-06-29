@@ -58,6 +58,11 @@ class GarageStorageService implements DocumentStorageDriver
         return $this->disk($project)->size($key);
     }
 
+    public function getFromTemplates(string $key): string
+    {
+        return $this->templatesDisk()->get($key);
+    }
+
     protected function disk(Project $project): \Illuminate\Contracts\Filesystem\Cloud
     {
         return Storage::build([
@@ -66,6 +71,20 @@ class GarageStorageService implements DocumentStorageDriver
             'secret'                  => config('princess.garage.secret_access_key'),
             'region'                  => config('princess.garage.region'),
             'bucket'                  => $this->projectStorage->bucketName($project),
+            'endpoint'                => config('princess.garage.s3_endpoint'),
+            'use_path_style_endpoint' => true,
+            'throw'                   => true,
+        ]);
+    }
+
+    protected function templatesDisk(): \Illuminate\Contracts\Filesystem\Cloud
+    {
+        return Storage::build([
+            'driver'                  => 's3',
+            'key'                     => config('princess.garage.access_key_id'),
+            'secret'                  => config('princess.garage.secret_access_key'),
+            'region'                  => config('princess.garage.region'),
+            'bucket'                  => config('princess.garage.templates_bucket'),
             'endpoint'                => config('princess.garage.s3_endpoint'),
             'use_path_style_endpoint' => true,
             'throw'                   => true,
