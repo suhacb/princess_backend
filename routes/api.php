@@ -21,6 +21,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductFlowController;
+use App\Http\Controllers\DocumentVersionController;
 use App\Http\Controllers\QaDocumentController;
 use App\Http\Controllers\RequirementController;
 use App\Http\Controllers\WorkPackageController;
@@ -137,6 +138,10 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.qa-documents.reject');
     Route::post('projects/{project}/qa-documents/{qaDocument}/confirm', [QaDocumentController::class, 'confirm'])
         ->name('projects.qa-documents.confirm');
+    Route::get('projects/{project}/qa-documents/{qaDocument}/versions', [DocumentVersionController::class, 'index'])
+        ->name('projects.qa-documents.versions.index');
+    Route::post('projects/{project}/qa-documents/{qaDocument}/versions/{version}/revert', [DocumentVersionController::class, 'revert'])
+        ->name('projects.qa-documents.versions.revert');
 
     Route::apiResource('projects.test-scenarios', TestScenarioController::class)
         ->parameters(['test-scenarios' => 'testScenario']);

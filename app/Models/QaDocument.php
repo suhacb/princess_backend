@@ -19,6 +19,7 @@ class QaDocument extends Model
 
     protected $fillable = [
         'project_id',
+        'current_version_id',
         'type',
         'category',
         'title',
@@ -59,6 +60,16 @@ class QaDocument extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    public function currentVersion(): BelongsTo
+    {
+        return $this->belongsTo(DocumentVersion::class, 'current_version_id');
+    }
+
+    public function versions(): HasMany
+    {
+        return $this->hasMany(DocumentVersion::class, 'document_id')->orderBy('version_number');
     }
 
     public function documentable(): MorphTo
