@@ -26,9 +26,11 @@ class DocumentVersion extends Model
     ];
 
     protected $casts = [
-        'version_number'  => 'integer',
-        'file_size_bytes' => 'integer',
-        'created_at'      => 'datetime',
+        'version_number'          => 'integer',
+        'file_size_bytes'         => 'integer',
+        'closed_without_changes'  => 'boolean',
+        'last_active_at'          => 'datetime',
+        'created_at'              => 'datetime',
     ];
 
     public function save(array $options = []): bool
