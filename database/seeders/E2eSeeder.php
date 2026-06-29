@@ -3,10 +3,15 @@
 namespace Database\Seeders;
 
 use App\Enums\ProjectRole;
+use App\Enums\QaDocumentStatus;
+use App\Enums\QaDocumentType;
+use App\Models\DocumentVersion;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\ProjectMember;
+use App\Models\QaDocument;
 use App\Models\User;
+use App\Services\Document\ProjectStorageService;
 use Illuminate\Database\Seeder;
 
 class E2eSeeder extends Seeder
@@ -38,10 +43,11 @@ class E2eSeeder extends Seeder
         $pmPerson = Person::create(['name' => $pmData['name'], 'email' => $pmData['email']]);
 
         $project = Project::create([
-            'name'       => 'E2E Test Project',
-            'reference'  => 'E2E-001',
-            'status'     => 'pre_project',
-            'created_by' => $pmPerson->id,
+            'name'              => 'E2E Test Project',
+            'reference'         => 'E2E-001',
+            'status'            => 'pre_project',
+            'document_provider' => 'garage',
+            'created_by'        => $pmPerson->id,
         ]);
 
         foreach (self::ROLE_USERS as $data) {
@@ -75,5 +81,31 @@ class E2eSeeder extends Seeder
             'email'       => self::NON_MEMBER['email'],
             'person_id'   => $nonMemberPerson->id,
         ]);
+
+        try {
+            app(ProjectStorageService::class)->provision($project);
+        } catch (\Throwable) {
+            // Garage unreachable — skip bucket provisioning silently.
+        }
+
+        $document = QaDocument::create([
+            'project_id' => $project->id,
+            'type'       => QaDocumentType::ProjectInitiationDocument,
+            'title'      => 'E2E Project Initiation Document',
+            'version'    => 'v0.1',
+            'status'     => QaDocumentStatus::Draft,
+            'created_by' => $pmPerson->id,
+        ]);
+
+        $version = DocumentVersion::create([
+            'document_id'     => $document->id,
+            'version_number'  => 1,
+            's3_key'          => "documents/{$document->id}/versions/1/project-initiation-document.docx",
+            'file_name'       => 'project-initiation-document.docx',
+            'file_size_bytes' => 0,
+            'created_by'      => $pmPerson->id,
+        ]);
+
+        $document->update(['current_version_id' => $version->id]);
     }
 }
