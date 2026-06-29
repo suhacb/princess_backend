@@ -61,6 +61,10 @@ return [
         'jwt_secret' => env('ONLYOFFICE_JWT_SECRET'),
     ],
 
+    'documents' => [
+        'upload_max_mb' => env('DOCUMENT_UPLOAD_MAX_MB', 50),
+    ],
+
     'e2e' => [
         'token' => env('E2E_TOKEN'),
     ],
