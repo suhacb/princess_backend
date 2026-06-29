@@ -8,6 +8,7 @@ use App\Enums\QaDocumentType;
 use App\Enums\RequirementStatus;
 use App\Http\Requests\QaDocument\QaDocumentRequest;
 use App\Http\Resources\QaDocumentResource;
+use App\Jobs\Document\ConvertDocumentJob;
 use App\Models\Project;
 use App\Models\QaDocument;
 use App\Services\Document\TemplateService;
@@ -252,7 +253,13 @@ class QaDocumentController extends Controller
             ]);
         });
 
-        return new QaDocumentResource($qaDocument->fresh()->load(['requirements', 'confirmedBy']));
+        $confirmed = $qaDocument->fresh()->load(['requirements', 'confirmedBy', 'currentVersion']);
+
+        if ($confirmed->currentVersion) {
+            ConvertDocumentJob::dispatch($confirmed->currentVersion);
+        }
+
+        return new QaDocumentResource($confirmed);
     }
 
     private function resolveDocumentable(array $validated): array

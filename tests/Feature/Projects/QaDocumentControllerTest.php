@@ -7,6 +7,7 @@ use App\Enums\ProjectRole;
 use App\Enums\QaDocumentStatus;
 use App\Enums\QaDocumentType;
 use App\Enums\RequirementStatus;
+use App\Jobs\Document\ConvertDocumentJob;
 use App\Models\DocumentTemplate;
 use App\Models\DocumentVersion;
 use App\Models\Meeting;
@@ -17,6 +18,7 @@ use App\Models\Requirement;
 use App\Models\User;
 use App\Services\Document\GarageStorageService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class QaDocumentControllerTest extends TestCase
@@ -531,6 +533,43 @@ class QaDocumentControllerTest extends TestCase
         $this->actingAs($observer)
             ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
             ->assertForbidden();
+    }
+
+    public function test_confirm_dispatches_convert_job_when_document_has_version(): void
+    {
+        Queue::fake();
+
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+        $version = DocumentVersion::factory()->create([
+            'document_id' => $doc->id,
+            'created_by'  => $this->person->id,
+        ]);
+        $doc->update(['current_version_id' => $version->id]);
+
+        [, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertOk();
+
+        Queue::assertPushed(ConvertDocumentJob::class, function ($job) use ($version) {
+            return $job->version->id === $version->id;
+        });
+    }
+
+    public function test_confirm_does_not_dispatch_convert_job_when_document_has_no_version(): void
+    {
+        Queue::fake();
+
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        [, $assurance] = $this->assurancePerson();
+
+        $this->actingAs($assurance)
+            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->assertOk();
+
+        Queue::assertNotPushed(ConvertDocumentJob::class);
     }
 
     // -------------------------------------------------------------------------
