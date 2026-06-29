@@ -49,7 +49,13 @@ class GarageAdminClient implements GarageAdminClientContract
     {
         $layout = $this->get('/v1/layout');
 
-        return isset($layout['roles'][$nodeId]);
+        foreach ($layout['roles'] ?? [] as $role) {
+            if (($role['id'] ?? '') === $nodeId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function applyLayout(string $nodeId, string $zone, int $capacityBytes): void
@@ -87,7 +93,8 @@ class GarageAdminClient implements GarageAdminClientContract
 
         foreach ($keys as $key) {
             if (($key['name'] ?? '') === $name) {
-                return $key;
+                // List endpoint returns 'id'; normalize to match the create-key response shape.
+                return ['accessKeyId' => $key['id'], 'name' => $key['name']];
             }
         }
 
