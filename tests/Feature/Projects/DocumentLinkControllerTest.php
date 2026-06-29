@@ -3,8 +3,10 @@
 namespace Tests\Feature\Projects;
 
 use App\Enums\ProjectRole;
-use App\Enums\QaDocumentStatus;
 use App\Enums\QaDocumentType;
+use App\Models\CheckpointReport;
+use App\Models\ExceptionReport;
+use App\Models\HighlightReport;
 use App\Models\Meeting;
 use App\Models\Person;
 use App\Models\Project;
@@ -288,5 +290,151 @@ class DocumentLinkControllerTest extends TestCase
         $this->getJson("/api/projects/{$this->project->id}/meetings/{$meeting->id}")
             ->assertOk()
             ->assertJsonPath('data.document', null);
+    }
+
+    // -------------------------------------------------------------------------
+    // link – remaining entity show endpoints include document key
+    // -------------------------------------------------------------------------
+
+    public function test_highlight_report_show_includes_document_when_linked(): void
+    {
+        $report   = HighlightReport::factory()->create(['project_id' => $this->project->id]);
+        $document = $this->makeDocument([
+            'type'              => QaDocumentType::HighlightReport->value,
+            'documentable_type' => HighlightReport::class,
+            'documentable_id'   => $report->id,
+        ]);
+
+        $this->getJson("/api/projects/{$this->project->id}/highlight-reports/{$report->id}")
+            ->assertOk()
+            ->assertJsonPath('data.document.id', $document->id);
+    }
+
+    public function test_checkpoint_report_show_includes_document_when_linked(): void
+    {
+        $report   = CheckpointReport::factory()->create(['project_id' => $this->project->id]);
+        $document = $this->makeDocument([
+            'type'              => QaDocumentType::CheckpointReport->value,
+            'documentable_type' => CheckpointReport::class,
+            'documentable_id'   => $report->id,
+        ]);
+
+        $this->getJson("/api/projects/{$this->project->id}/checkpoint-reports/{$report->id}")
+            ->assertOk()
+            ->assertJsonPath('data.document.id', $document->id);
+    }
+
+    public function test_exception_report_show_includes_document_when_linked(): void
+    {
+        $report   = ExceptionReport::factory()->create(['project_id' => $this->project->id]);
+        $document = $this->makeDocument([
+            'type'              => QaDocumentType::ExceptionReport->value,
+            'documentable_type' => ExceptionReport::class,
+            'documentable_id'   => $report->id,
+        ]);
+
+        $this->getJson("/api/projects/{$this->project->id}/exception-reports/{$report->id}")
+            ->assertOk()
+            ->assertJsonPath('data.document.id', $document->id);
+    }
+
+    public function test_stage_show_includes_document_when_linked(): void
+    {
+        $stage    = Stage::factory()->create(['project_id' => $this->project->id]);
+        $document = $this->makeDocument([
+            'type'              => QaDocumentType::StagePlan->value,
+            'documentable_type' => Stage::class,
+            'documentable_id'   => $stage->id,
+        ]);
+
+        $this->getJson("/api/projects/{$this->project->id}/stages/{$stage->id}")
+            ->assertOk()
+            ->assertJsonPath('data.document.id', $document->id);
+    }
+
+    public function test_project_show_includes_document_when_linked(): void
+    {
+        $document = $this->makeDocument([
+            'type'              => QaDocumentType::ProjectInitiationDocument->value,
+            'documentable_type' => Project::class,
+            'documentable_id'   => $this->project->id,
+        ]);
+
+        $this->getJson("/api/projects/{$this->project->id}")
+            ->assertOk()
+            ->assertJsonPath('data.document.id', $document->id);
+    }
+
+    // -------------------------------------------------------------------------
+    // link – additional validation
+    // -------------------------------------------------------------------------
+
+    public function test_link_requires_documentable_id(): void
+    {
+        $document = $this->makeDocument(['type' => QaDocumentType::MeetingMinutes->value]);
+
+        $this->postJson($this->linkUrl($document), ['documentable_type' => 'meeting'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrorFor('documentable_id');
+    }
+
+    public function test_link_rejects_unknown_documentable_type_alias(): void
+    {
+        $document = $this->makeDocument(['type' => QaDocumentType::MeetingMinutes->value]);
+
+        $this->postJson($this->linkUrl($document), [
+            'documentable_type' => 'banana',
+            'documentable_id'   => 1,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrorFor('documentable_type');
+    }
+
+    // -------------------------------------------------------------------------
+    // link – read-only role is forbidden
+    // -------------------------------------------------------------------------
+
+    public function test_link_forbidden_for_observer_role(): void
+    {
+        $person  = Person::factory()->create();
+        $observer = User::factory()->create(['person_id' => $person->id]);
+        $this->project->members()->create([
+            'person_id' => $person->id,
+            'role'      => ProjectRole::Observer->value,
+        ]);
+
+        $document = $this->makeDocument(['type' => QaDocumentType::MeetingMinutes->value]);
+        $meeting  = Meeting::factory()->create(['project_id' => $this->project->id]);
+
+        $this->actingAs($observer)
+            ->postJson($this->linkUrl($document), [
+                'documentable_type' => 'meeting',
+                'documentable_id'   => $meeting->id,
+            ])->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // link – idempotency
+    // -------------------------------------------------------------------------
+
+    public function test_link_to_same_entity_again_is_idempotent(): void
+    {
+        $meeting  = Meeting::factory()->create(['project_id' => $this->project->id]);
+        $document = $this->makeDocument([
+            'type'              => QaDocumentType::MeetingMinutes->value,
+            'documentable_type' => Meeting::class,
+            'documentable_id'   => $meeting->id,
+        ]);
+
+        $this->postJson($this->linkUrl($document), [
+            'documentable_type' => 'meeting',
+            'documentable_id'   => $meeting->id,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('qa_documents', [
+            'id'                => $document->id,
+            'documentable_type' => Meeting::class,
+            'documentable_id'   => $meeting->id,
+        ]);
     }
 }
