@@ -30,6 +30,6 @@ class OnlyOfficeEditorConfigController extends Controller
         $person = auth()->user()->person;
         $config = $editor->openSession($qaDocument, $person);
 
-        return response()->json($config);
+        return response()->json(['data' => $config]);
     }
 }

@@ -1,0 +1,250 @@
+- generic [ref=f25e4]:
+  - navigation "Main navigation" [ref=f25e7]:
+    - generic [ref=f25e9]:
+      - button "One Core - Banka Sparkasse" [ref=f25e11] [cursor=pointer]:
+        - img [ref=f25e13]: folder_open
+        - generic [ref=f25e14]: One Core - Banka Sparkasse
+        - img [ref=f25e15]: expand_more
+      - generic [ref=f25e17]:
+        - generic [ref=f25e18]: Overview
+        - link "Home" [ref=f25e19] [cursor=pointer]:
+          - /url: /p/1/home
+          - img [ref=f25e20]: dashboard
+          - generic [ref=f25e21]: Home
+      - generic [ref=f25e22]:
+        - generic [ref=f25e23]: Planning
+        - link "Plan & stages" [ref=f25e24] [cursor=pointer]:
+          - /url: /p/1/plan
+          - img [ref=f25e25]: account_tree
+          - generic [ref=f25e26]: Plan & stages
+      - generic [ref=f25e27]:
+        - generic [ref=f25e28]: Logs
+        - link "Risk Log" [ref=f25e29] [cursor=pointer]:
+          - /url: /p/1/risks
+          - img [ref=f25e30]: warning_amber
+          - generic [ref=f25e31]: Risk Log
+        - link "Issue Log" [ref=f25e32] [cursor=pointer]:
+          - /url: /p/1/issues
+          - img [ref=f25e33]: bug_report
+          - generic [ref=f25e34]: Issue Log
+        - link "Change Log" [ref=f25e35] [cursor=pointer]:
+          - /url: /p/1/changes
+          - img [ref=f25e36]: sync_alt
+          - generic [ref=f25e37]: Change Log
+        - link "Quality" [ref=f25e38] [cursor=pointer]:
+          - /url: /p/1/quality
+          - img [ref=f25e39]: fact_check
+          - generic [ref=f25e40]: Quality
+        - link "Lessons" [ref=f25e41] [cursor=pointer]:
+          - /url: /p/1/lessons
+          - img [ref=f25e42]: school
+          - generic [ref=f25e43]: Lessons
+      - generic [ref=f25e44]:
+        - generic [ref=f25e45]: Reports
+        - link "Highlight" [ref=f25e46] [cursor=pointer]:
+          - /url: /p/1/reports/highlight
+          - img [ref=f25e47]: summarize
+          - generic [ref=f25e48]: Highlight
+        - link "Exceptions" [ref=f25e49] [cursor=pointer]:
+          - /url: /p/1/reports/exceptions
+          - img [ref=f25e50]: report_problem
+          - generic [ref=f25e51]: Exceptions
+      - generic [ref=f25e52]:
+        - generic [ref=f25e53]: Documents
+        - link "Documents" [ref=f25e54] [cursor=pointer]:
+          - /url: /p/1/documents
+          - img [ref=f25e55]: folder_open
+          - generic [ref=f25e56]: Documents
+        - link "Review Queue" [ref=f25e57] [cursor=pointer]:
+          - /url: /p/1/documents/review-queue
+          - img [ref=f25e58]: rate_review
+          - generic [ref=f25e59]: Review Queue
+    - link "Settings" [ref=f25e61] [cursor=pointer]:
+      - /url: /p/1/settings
+      - img [ref=f25e62]: settings
+      - generic [ref=f25e63]: Settings
+  - generic [ref=f25e64]:
+    - banner [ref=f25e66]:
+      - generic [ref=f25e67]:
+        - button "Toggle navigation" [ref=f25e68] [cursor=pointer]:
+          - img [ref=f25e69]: menu
+        - link "Princess home" [ref=f25e72] [cursor=pointer]:
+          - /url: /projects
+          - img "Princess" [ref=f25e73]
+        - button "Switch project" [ref=f25e74] [cursor=pointer]:
+          - generic [ref=f25e75]: One Core - Banka Sparkasse
+          - img [ref=f25e76]: expand_more
+      - button "Search (Ctrl+K)" [ref=f25e78] [cursor=pointer]:
+        - img [ref=f25e79]: search
+        - generic [ref=f25e80]:
+          - text: Search…
+          - generic [ref=f25e81]: ⌘K
+      - generic [ref=f25e84]:
+        - generic "Viewing as" [ref=f25e85]:
+          - generic [ref=f25e86]: Viewing as
+          - group [ref=f25e87]:
+            - button "PM" [pressed] [ref=f25e88] [cursor=pointer]
+            - button "PMO" [ref=f25e89] [cursor=pointer]
+            - button "TM" [ref=f25e90] [cursor=pointer]
+        - button "Notifications" [ref=f25e91] [cursor=pointer]:
+          - img "3 notifications" [ref=f25e92]:
+            - text: notifications_none
+            - generic: "3"
+        - button "User menu" [ref=f25e95] [cursor=pointer]:
+          - generic "Blaž Suhač" [ref=f25e97]: BS
+    - main [ref=f25e98]:
+      - generic [ref=f25e101]:
+        - generic [ref=f25e102]:
+          - button "Back to document" [ref=f25e103] [cursor=pointer]:
+            - img [ref=f25e104]: arrow_back
+          - generic [ref=f25e107]: Document Editor
+        - iframe [active] [ref=f25e108]:
+          - application [ref=f26e1]:
+            - generic [ref=f26e2]:
+              - img
+              - img
+              - img [ref=f26e3]
+              - img
+            - main [ref=f26e4]:
+              - generic [ref=f26e6]:
+                - generic [ref=f26e9]:
+                  - menubar "Quick access toolbar" [ref=f26e14]:
+                    - button "Save (⌘+S)" [disabled] [ref=f26e16]
+                    - button "Print file (⌘+P)" [ref=f26e19] [cursor=pointer]
+                    - button "Undo (⌘+Z)" [disabled] [ref=f26e22]
+                    - button "Redo (⌘+Y)" [disabled] [ref=f26e25]
+                    - button "Customize Quick Access Toolbar" [ref=f26e29] [cursor=pointer]
+                  - textbox [disabled] [ref=f26e32]: Test
+                  - generic [ref=f26e36]: BS
+                - toolbar [ref=f26e37]:
+                  - generic [ref=f26e38]:
+                    - generic [ref=f26e39]:
+                      - tablist [ref=f26e42]:
+                        - listitem [ref=f26e43]:
+                          - tab "File" [ref=f26e44]
+                        - listitem [ref=f26e45]:
+                          - tab "Home" [ref=f26e46]
+                        - listitem [ref=f26e47]:
+                          - tab "Insert" [ref=f26e48]
+                        - listitem [ref=f26e49]:
+                          - tab "Draw" [ref=f26e50]
+                        - listitem [ref=f26e51]:
+                          - tab "Layout" [ref=f26e52]
+                        - listitem [ref=f26e53]:
+                          - tab "References" [ref=f26e54]
+                        - listitem [ref=f26e55]:
+                          - tab "Collaboration" [ref=f26e56]
+                        - listitem [ref=f26e57]:
+                          - tab "Protection" [ref=f26e58]
+                        - listitem [ref=f26e59]:
+                          - tab "View" [ref=f26e60]
+                        - listitem [ref=f26e61]:
+                          - tab "Plugins" [ref=f26e62]
+                        - listitem [ref=f26e63]:
+                          - tab "AI" [ref=f26e64]
+                      - generic [ref=f26e69]:
+                        - button "Editing" [ref=f26e74] [cursor=pointer]:
+                          - generic [ref=f26e76]: Editing
+                        - button "Find (⌘+F)" [ref=f26e81] [cursor=pointer]
+                    - tabpanel [ref=f26e83]:
+                      - generic [ref=f26e84]:
+                        - generic [ref=f26e85]:
+                          - button "Copy (⌘+C)" [disabled] [ref=f26e88]
+                          - button "Paste (⌘+V)" [ref=f26e92] [cursor=pointer]
+                        - generic [ref=f26e94]:
+                          - button "Cut (⌘+X)" [disabled] [ref=f26e97]
+                          - button "Copy style (⌘+⌥+C)" [ref=f26e101] [cursor=pointer]
+                      - tabpanel "Home" [ref=f26e105]:
+                        - generic [ref=f26e106]:
+                          - generic [ref=f26e107]:
+                            - generic [ref=f26e109]:
+                              - combobox "Font" [ref=f26e110]: Arial
+                              - button [ref=f26e111] [cursor=pointer]
+                            - generic [ref=f26e114]:
+                              - combobox "Font size" [ref=f26e115]: "11"
+                              - button [ref=f26e116] [cursor=pointer]
+                            - button "Increment font size (⌘+])" [ref=f26e119] [cursor=pointer]
+                            - button "Decrement font size (⌘+[)" [ref=f26e122] [cursor=pointer]
+                            - button "Change case" [ref=f26e126] [cursor=pointer]
+                          - generic [ref=f26e130]:
+                            - button "Bold (⌘+B)" [ref=f26e132] [cursor=pointer]
+                            - button "Italic (⌘+I)" [ref=f26e135] [cursor=pointer]
+                            - button "Underline (⌘+U)" [ref=f26e138] [cursor=pointer]
+                            - button "Strikethrough (⌘+⇧+X)" [ref=f26e141] [cursor=pointer]
+                            - button "Superscript (⌘+,)" [ref=f26e144] [cursor=pointer]
+                            - button "Subscript (⌘+.)" [ref=f26e147] [cursor=pointer]
+                            - generic [ref=f26e150]:
+                              - button "Highlight color" [ref=f26e151] [cursor=pointer]
+                              - button "Highlight color" [ref=f26e153] [cursor=pointer]
+                            - generic [ref=f26e157]:
+                              - button "Font color" [ref=f26e158] [cursor=pointer]
+                              - button "Font color" [ref=f26e160] [cursor=pointer]
+                            - button "Clear style" [ref=f26e164] [cursor=pointer]
+                        - generic [ref=f26e167]:
+                          - generic [ref=f26e168]:
+                            - generic [ref=f26e170]:
+                              - button "Bullets" [ref=f26e171] [cursor=pointer]
+                              - button "Bullets" [ref=f26e173] [cursor=pointer]
+                            - generic [ref=f26e177]:
+                              - button "Numbering" [ref=f26e178] [cursor=pointer]
+                              - button "Numbering" [ref=f26e180] [cursor=pointer]
+                            - button "Multilevel list" [ref=f26e185] [cursor=pointer]
+                            - button "Decrease indent (⌘+⇧+M)" [ref=f26e190] [cursor=pointer]
+                            - button "Increase indent (⌘+M)" [ref=f26e193] [cursor=pointer]
+                            - button "Paragraph line spacing" [ref=f26e197] [cursor=pointer]
+                            - button "Text direction" [ref=f26e203] [cursor=pointer]
+                          - generic [ref=f26e207]:
+                            - button "Align left (⌘+L)" [ref=f26e209] [cursor=pointer]
+                            - button "Align center (⌘+E)" [pressed] [ref=f26e212] [cursor=pointer]
+                            - button "Align right (⌘+R)" [ref=f26e215] [cursor=pointer]
+                            - button "Justified (⌘+J)" [ref=f26e218] [cursor=pointer]
+                            - generic [ref=f26e221]:
+                              - button "Nonprinting characters (⌘+⇧+8)" [ref=f26e222] [cursor=pointer]
+                              - button "Nonprinting characters (⌘+⇧+8)" [ref=f26e224] [cursor=pointer]
+                            - generic [ref=f26e228]:
+                              - button "Shading" [ref=f26e229] [cursor=pointer]
+                              - button "Shading" [ref=f26e231] [cursor=pointer]
+                            - generic [ref=f26e235]:
+                              - button "Borders" [ref=f26e236] [cursor=pointer]
+                              - button "Borders" [ref=f26e238] [cursor=pointer]
+                        - button "More" [ref=f26e245] [cursor=pointer]:
+                          - generic [ref=f26e249]: More
+                - generic [ref=f26e250]:
+                  - generic:
+                    - menubar "Left menu" [ref=f26e251]:
+                      - button [ref=f26e254] [cursor=pointer]
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - generic:
+                              - textbox [active]
+                    - menubar "Right menu" [ref=f26e264]:
+                      - button [ref=f26e267] [cursor=pointer]
+                - generic [ref=f26e270]:
+                  - generic [ref=f26e272] [cursor=pointer]: Page 1 of 72
+                  - button "Word count" [ref=f26e277] [cursor=pointer]: Word count
+                  - generic [ref=f26e280]:
+                    - button "Slovenski – Slovenija" [ref=f26e284] [cursor=pointer]: Slovenski – Slovenija
+                    - button "Set document language" [ref=f26e288] [cursor=pointer]
+                    - button "Spell checking" [pressed] [ref=f26e291] [cursor=pointer]
+                    - generic [ref=f26e295]:
+                      - button "Track changes" [ref=f26e296] [cursor=pointer]
+                      - button "Track changes" [ref=f26e298] [cursor=pointer]
+                    - button "Multiple pages" [ref=f26e302] [cursor=pointer]
+                    - button "Fit to page" [ref=f26e304] [cursor=pointer]
+                    - button "Fit to width" [ref=f26e306] [cursor=pointer]
+                    - button "Zoom out (⌘+-)" [ref=f26e308] [cursor=pointer]
+                    - generic "Zoom" [ref=f26e310]:
+                      - button "Zoom 100%" [ref=f26e311] [cursor=pointer]:
+                        - generic [ref=f26e312]: Zoom 100%
+                    - button "Zoom in (⌘+=)" [ref=f26e313] [cursor=pointer]
+            - img [ref=f26e315]
+            - img
+            - generic [ref=f26e317]:
+              - generic [ref=f26e320]:
+                - generic [ref=f26e321]: NewMultipage view
+                - text: Work with multiple pages at once for easier navigation.
+              - generic [ref=f26e322]: Got it
+            - iframe [ref=f26e323]:
+              

@@ -48,12 +48,12 @@ class QaDocumentControllerTest extends TestCase
 
     private function indexUrl(): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents";
+        return "/api/projects/{$this->project->id}/documents";
     }
 
     private function documentUrl(QaDocument $doc): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$doc->id}";
+        return "/api/projects/{$this->project->id}/documents/{$doc->id}";
     }
 
     private function makeDocument(array $attributes = []): QaDocument
@@ -322,7 +322,7 @@ class QaDocumentControllerTest extends TestCase
     {
         $doc = $this->makeDocument(['status' => QaDocumentStatus::Draft->value]);
 
-        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/send-for-review")
+        $this->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/send-for-review")
             ->assertOk()
             ->assertJsonPath('data.status', QaDocumentStatus::InReview->value);
     }
@@ -331,7 +331,7 @@ class QaDocumentControllerTest extends TestCase
     {
         $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
 
-        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/send-for-review")
+        $this->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/send-for-review")
             ->assertStatus(409);
     }
 
@@ -343,7 +343,7 @@ class QaDocumentControllerTest extends TestCase
         $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
 
         $this->actingAs($observer)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/send-for-review")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/send-for-review")
             ->assertForbidden();
     }
 
@@ -358,7 +358,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/reject", [
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/reject", [
                 'review_notes' => 'Needs more detail in section 3.',
             ])
             ->assertOk()
@@ -373,7 +373,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/reject", [])
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/reject", [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('review_notes');
     }
@@ -385,7 +385,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/reject", [
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/reject", [
                 'review_notes' => 'Not applicable',
             ])
             ->assertStatus(409);
@@ -402,7 +402,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertOk()
             ->assertJsonPath('data.status', QaDocumentStatus::Confirmed->value);
 
@@ -423,7 +423,7 @@ class QaDocumentControllerTest extends TestCase
             $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
 
             $this->actingAs($memberUser)
-                ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+                ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
                 ->assertOk("Role {$role->value} should be able to confirm");
         }
     }
@@ -435,7 +435,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertStatus(409);
     }
 
@@ -462,7 +462,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertOk();
 
         // Reviewed requirement gets approved
@@ -493,7 +493,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertOk();
 
         // Requirement must NOT be touched — doc type is test_specification
@@ -514,7 +514,7 @@ class QaDocumentControllerTest extends TestCase
         [$assurancePerson, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$new->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$new->id}/confirm")
             ->assertOk();
 
         $this->assertDatabaseHas('qa_documents', [
@@ -531,7 +531,7 @@ class QaDocumentControllerTest extends TestCase
         $this->project->members()->create(['person_id' => $observerPerson->id, 'role' => ProjectRole::Observer->value]);
 
         $this->actingAs($observer)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertForbidden();
     }
 
@@ -549,7 +549,7 @@ class QaDocumentControllerTest extends TestCase
         [, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertOk();
 
         Queue::assertPushed(ConvertDocumentJob::class, function ($job) use ($version) {
@@ -566,7 +566,7 @@ class QaDocumentControllerTest extends TestCase
         [, $assurance] = $this->assurancePerson();
 
         $this->actingAs($assurance)
-            ->postJson("/api/projects/{$this->project->id}/qa-documents/{$doc->id}/confirm")
+            ->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
             ->assertOk();
 
         Queue::assertNotPushed(ConvertDocumentJob::class);

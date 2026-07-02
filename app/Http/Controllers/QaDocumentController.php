@@ -47,7 +47,7 @@ class QaDocumentController extends Controller
             $query->where('status', $request->status);
         }
 
-        return QaDocumentResource::collection($query->get());
+        return QaDocumentResource::collection($query->with('currentVersion')->get());
     }
 
     /**
@@ -75,22 +75,22 @@ class QaDocumentController extends Controller
         $this->assertItemIdsValid($project, $type, $requirementIds);
         $this->assertSupersedesValid($project, $validated['supersedes_id'] ?? null);
 
-        $document = $project->qaDocuments()->create(array_merge($validated, [
+        $qaDocument = $project->qaDocuments()->create(array_merge($validated, [
             'status'     => QaDocumentStatus::Draft->value,
             'created_by' => auth()->user()->person_id,
         ]));
 
         if ($requirementIds) {
-            $document->requirements()->sync($requirementIds);
+            $qaDocument->requirements()->sync($requirementIds);
         }
 
         try {
-            app(TemplateService::class)->applyToDocument($document);
+            app(TemplateService::class)->applyToDocument($qaDocument);
         } catch (\Throwable) {
             // Template application is best-effort; never block document creation.
         }
 
-        return new QaDocumentResource($document->load(['requirements']));
+        return new QaDocumentResource($qaDocument->load(['requirements']));
     }
 
     /**
@@ -102,7 +102,7 @@ class QaDocumentController extends Controller
     {
         $this->authorize('view', [QaDocument::class, $project, $qaDocument]);
 
-        return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable']));
+        return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable', 'currentVersion']));
     }
 
     /**

@@ -13,6 +13,7 @@ class OnlyOfficeClient
     public function __construct(
         private readonly string $jwtSecret,
         private readonly string $serverUrl,
+        private readonly ?string $publicUrl = null,
     ) {}
 
     /**
@@ -46,7 +47,8 @@ class OnlyOfficeClient
             ],
         ];
 
-        $config['token'] = $this->sign($config);
+        $config['token']     = $this->sign($config);
+        $config['serverUrl'] = $this->publicUrl ?? $this->serverUrl;
 
         return $config;
     }

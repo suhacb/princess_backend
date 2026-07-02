@@ -1,0 +1,12 @@
+- generic [active] [ref=f18e1]:
+  - banner [ref=f18e2]:
+    - link "ONLYOFFICE" [ref=f18e3] [cursor=pointer]:
+      - /url: https://www.onlyoffice.com/
+      - img "ONLYOFFICE" [ref=f18e4]
+  - generic [ref=f18e6]:
+    - heading "Test example is not running" [level=1] [ref=f18e7]
+    - paragraph [ref=f18e8]: Start the service and try again.
+    - generic [ref=f18e9]: sudo docker exec fab3372326be supervisorctl start ds:example
+    - link "TRY AGAIN" [ref=f18e10] [cursor=pointer]:
+      - /url: ../example/
+      - generic [ref=f18e11]: TRY AGAIN

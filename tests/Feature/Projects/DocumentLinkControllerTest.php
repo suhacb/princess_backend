@@ -43,7 +43,7 @@ class DocumentLinkControllerTest extends TestCase
 
     private function linkUrl(QaDocument $doc): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$doc->id}/link";
+        return "/api/projects/{$this->project->id}/documents/{$doc->id}/link";
     }
 
     private function makeDocument(array $attributes = []): QaDocument

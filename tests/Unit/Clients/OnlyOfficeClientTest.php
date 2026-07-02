@@ -83,6 +83,38 @@ class OnlyOfficeClientTest extends TestCase
         $this->assertSame('Alice', $config['editorConfig']['user']['name']);
     }
 
+    public function test_generate_editor_config_includes_server_url(): void
+    {
+        [$document, $version, $person] = $this->makeModels();
+
+        $config = $this->client->generateEditorConfig($document, $version, $person, 'https://cb', null);
+
+        $this->assertSame('http://onlyoffice', $config['serverUrl']);
+    }
+
+    public function test_generate_editor_config_uses_public_url_when_set(): void
+    {
+        [$document, $version, $person] = $this->makeModels();
+
+        $client = new OnlyOfficeClient('test-secret', 'http://onlyoffice', 'http://localhost:10112');
+        $config = $client->generateEditorConfig($document, $version, $person, 'https://cb', null);
+
+        $this->assertSame('http://localhost:10112', $config['serverUrl']);
+    }
+
+    public function test_server_url_is_not_included_in_signed_jwt(): void
+    {
+        [$document, $version, $person] = $this->makeModels();
+
+        $client = new OnlyOfficeClient('test-secret', 'http://onlyoffice', 'http://localhost:10112');
+        $config = $client->generateEditorConfig($document, $version, $person, 'https://cb', null);
+
+        $parts   = explode('.', $config['token']);
+        $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+
+        $this->assertArrayNotHasKey('serverUrl', $payload);
+    }
+
     // -------------------------------------------------------------------------
     // parseCallback
     // -------------------------------------------------------------------------

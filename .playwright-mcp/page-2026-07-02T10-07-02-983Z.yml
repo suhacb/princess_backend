@@ -1,0 +1,135 @@
+- generic [ref=f13e4]:
+  - navigation "Main navigation" [ref=f13e7]:
+    - generic [ref=f13e9]:
+      - button "Select project" [ref=f13e11] [cursor=pointer]:
+        - img [ref=f13e13]: add_circle_outline
+        - generic [ref=f13e14]: Select project
+      - generic [ref=f13e16]:
+        - generic [ref=f13e17]: Portfolio
+        - link "All projects" [ref=f13e18] [cursor=pointer]:
+          - /url: /projects
+          - img [ref=f13e19]: folder_open
+          - generic [ref=f13e20]: All projects
+    - link "Settings" [ref=f13e22] [cursor=pointer]:
+      - /url: /projects
+      - img [ref=f13e23]: settings
+      - generic [ref=f13e24]: Settings
+  - generic [ref=f13e25]:
+    - banner [ref=f13e27]:
+      - generic [ref=f13e28]:
+        - button "Toggle navigation" [ref=f13e29] [cursor=pointer]:
+          - img [ref=f13e30]: menu
+        - link "Princess home" [ref=f13e33] [cursor=pointer]:
+          - /url: /projects
+          - img "Princess" [ref=f13e34]
+        - button "Select project" [ref=f13e35] [cursor=pointer]:
+          - generic [ref=f13e36]: Select project
+          - img [ref=f13e37]: expand_more
+      - button "Search (Ctrl+K)" [ref=f13e39] [cursor=pointer]:
+        - img [ref=f13e40]: search
+        - generic [ref=f13e41]:
+          - text: Search…
+          - generic [ref=f13e42]: ⌘K
+      - generic [ref=f13e45]:
+        - generic "Viewing as" [ref=f13e46]:
+          - generic [ref=f13e47]: Viewing as
+          - group [ref=f13e48]:
+            - button "PM" [pressed] [ref=f13e49] [cursor=pointer]
+            - button "PMO" [ref=f13e50] [cursor=pointer]
+            - button "TM" [ref=f13e51] [cursor=pointer]
+        - button "Notifications" [ref=f13e52] [cursor=pointer]:
+          - img "3 notifications" [ref=f13e53]:
+            - text: notifications_none
+            - generic: "3"
+        - button "User menu" [ref=f13e56] [cursor=pointer]:
+          - generic "Blaž Suhač" [ref=f13e58]: BS
+    - main [ref=f13e59]:
+      - generic [ref=f13e62]:
+        - generic [ref=f13e63]:
+          - generic [ref=f13e64]:
+            - heading "Projects" [level=1] [ref=f13e65]
+            - generic [ref=f13e66]: "5"
+          - generic [ref=f13e67]:
+            - combobox "All statuses" [ref=f13e72] [cursor=pointer]:
+              - generic [ref=f13e73]:
+                - generic [ref=f13e75]: All statuses
+                - img [ref=f13e78]
+            - button "New project" [ref=f13e81]:
+              - img [ref=f13e82]: add
+              - generic [ref=f13e83]: New project
+        - table [ref=f13e87]:
+          - rowgroup [ref=f13e88]:
+            - row "Project Stage Open risks Tolerance Updated" [ref=f13e89]:
+              - columnheader [ref=f13e90]
+              - columnheader "Project" [ref=f13e91]
+              - columnheader "Stage" [ref=f13e92]
+              - columnheader "Open risks" [ref=f13e93]
+              - columnheader "Tolerance" [ref=f13e94]
+              - columnheader "Updated" [ref=f13e95]
+              - columnheader [ref=f13e96]
+          - rowgroup [ref=f13e97]:
+            - row "One Core - Banka Sparkasse PROJ-001 Pre-Project — Near limit 23 Jun 2026" [ref=f13e98] [cursor=pointer]:
+              - cell [ref=f13e99]
+              - cell "One Core - Banka Sparkasse PROJ-001" [ref=f13e101]:
+                - generic [ref=f13e102]: One Core - Banka Sparkasse
+                - generic [ref=f13e103]: PROJ-001
+              - cell "Pre-Project" [ref=f13e104]:
+                - generic [ref=f13e106]: Pre-Project
+              - cell "—" [ref=f13e107]
+              - cell "Near limit" [ref=f13e108]:
+                - generic [ref=f13e110]: Near limit
+              - cell "23 Jun 2026" [ref=f13e111]
+              - cell [ref=f13e112]:
+                - img [ref=f13e113]: chevron_right
+            - row "officiis est quia PROJ-8334 Pre-Project — Near limit 27 Jun 2026" [ref=f13e114] [cursor=pointer]:
+              - cell [ref=f13e115]
+              - cell "officiis est quia PROJ-8334" [ref=f13e117]:
+                - generic [ref=f13e118]: officiis est quia
+                - generic [ref=f13e119]: PROJ-8334
+              - cell "Pre-Project" [ref=f13e120]:
+                - generic [ref=f13e122]: Pre-Project
+              - cell "—" [ref=f13e123]
+              - cell "Near limit" [ref=f13e124]:
+                - generic [ref=f13e126]: Near limit
+              - cell "27 Jun 2026" [ref=f13e127]
+              - cell [ref=f13e128]:
+                - img [ref=f13e129]: chevron_right
+            - row "possimus quis eius PROJ-9358 Pre-Project — Near limit 29 Jun 2026" [ref=f13e130] [cursor=pointer]:
+              - cell [ref=f13e131]
+              - cell "possimus quis eius PROJ-9358" [ref=f13e133]:
+                - generic [ref=f13e134]: possimus quis eius
+                - generic [ref=f13e135]: PROJ-9358
+              - cell "Pre-Project" [ref=f13e136]:
+                - generic [ref=f13e138]: Pre-Project
+              - cell "—" [ref=f13e139]
+              - cell "Near limit" [ref=f13e140]:
+                - generic [ref=f13e142]: Near limit
+              - cell "29 Jun 2026" [ref=f13e143]
+              - cell [ref=f13e144]:
+                - img [ref=f13e145]: chevron_right
+            - row "qui eligendi qui PROJ-2156 Pre-Project — Near limit 29 Jun 2026" [ref=f13e146] [cursor=pointer]:
+              - cell [ref=f13e147]
+              - cell "qui eligendi qui PROJ-2156" [ref=f13e149]:
+                - generic [ref=f13e150]: qui eligendi qui
+                - generic [ref=f13e151]: PROJ-2156
+              - cell "Pre-Project" [ref=f13e152]:
+                - generic [ref=f13e154]: Pre-Project
+              - cell "—" [ref=f13e155]
+              - cell "Near limit" [ref=f13e156]:
+                - generic [ref=f13e158]: Near limit
+              - cell "29 Jun 2026" [ref=f13e159]
+              - cell [ref=f13e160]:
+                - img [ref=f13e161]: chevron_right
+            - row "Testni projekt PROJ-002 Pre-Project — Near limit 2 Jul 2026" [ref=f13e162] [cursor=pointer]:
+              - cell [ref=f13e163]
+              - cell "Testni projekt PROJ-002" [ref=f13e165]:
+                - generic [ref=f13e166]: Testni projekt
+                - generic [ref=f13e167]: PROJ-002
+              - cell "Pre-Project" [ref=f13e168]:
+                - generic [ref=f13e170]: Pre-Project
+              - cell "—" [ref=f13e171]
+              - cell "Near limit" [ref=f13e172]:
+                - generic [ref=f13e174]: Near limit
+              - cell "2 Jul 2026" [ref=f13e175]
+              - cell [ref=f13e176]:
+                - img [ref=f13e177]: chevron_right

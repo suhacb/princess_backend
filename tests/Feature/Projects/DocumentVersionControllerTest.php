@@ -49,22 +49,22 @@ class DocumentVersionControllerTest extends TestCase
 
     private function indexUrl(): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/versions";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/versions";
     }
 
     private function revertUrl(DocumentVersion $version): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/versions/{$version->id}/revert";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/versions/{$version->id}/revert";
     }
 
     private function uploadUrl(): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/upload";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/upload";
     }
 
     private function downloadUrl(?int $versionId = null): string
     {
-        $url = "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/download";
+        $url = "/api/projects/{$this->project->id}/documents/{$this->document->id}/download";
         return $versionId !== null ? "{$url}?version={$versionId}" : $url;
     }
 
@@ -119,7 +119,7 @@ class DocumentVersionControllerTest extends TestCase
         $other = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->getJson("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/versions")
+        $this->getJson("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/versions")
             ->assertNotFound();
     }
 
@@ -232,7 +232,7 @@ class DocumentVersionControllerTest extends TestCase
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
         $v1         = DocumentVersion::factory()->create(['document_id' => $foreignDoc->id, 'version_number' => 1, 's3_key' => 'k1', 'created_by' => $this->person->id]);
 
-        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/versions/{$v1->id}/revert")
+        $this->postJson("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/versions/{$v1->id}/revert")
             ->assertNotFound();
     }
 
@@ -392,7 +392,7 @@ class DocumentVersionControllerTest extends TestCase
         $other      = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->post("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/upload", ['file' => $this->fakeDocx()])
+        $this->post("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/upload", ['file' => $this->fakeDocx()])
             ->assertNotFound();
     }
 
@@ -462,7 +462,7 @@ class DocumentVersionControllerTest extends TestCase
         $other      = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->get("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/download")
+        $this->get("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/download")
             ->assertNotFound();
     }
 

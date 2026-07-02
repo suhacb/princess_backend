@@ -1,0 +1,131 @@
+- generic [ref=f16e4]:
+  - navigation "Main navigation" [ref=f16e7]:
+    - generic [ref=f16e9]:
+      - button "One Core - Banka Sparkasse" [ref=f16e11] [cursor=pointer]:
+        - img [ref=f16e13]: folder_open
+        - generic [ref=f16e14]: One Core - Banka Sparkasse
+        - img [ref=f16e15]: expand_more
+      - generic [ref=f16e17]:
+        - generic [ref=f16e18]: Overview
+        - link "Home" [ref=f16e19] [cursor=pointer]:
+          - /url: /p/1/home
+          - img [ref=f16e20]: dashboard
+          - generic [ref=f16e21]: Home
+      - generic [ref=f16e22]:
+        - generic [ref=f16e23]: Planning
+        - link "Plan & stages" [ref=f16e24] [cursor=pointer]:
+          - /url: /p/1/plan
+          - img [ref=f16e25]: account_tree
+          - generic [ref=f16e26]: Plan & stages
+      - generic [ref=f16e27]:
+        - generic [ref=f16e28]: Logs
+        - link "Risk Log" [ref=f16e29] [cursor=pointer]:
+          - /url: /p/1/risks
+          - img [ref=f16e30]: warning_amber
+          - generic [ref=f16e31]: Risk Log
+        - link "Issue Log" [ref=f16e32] [cursor=pointer]:
+          - /url: /p/1/issues
+          - img [ref=f16e33]: bug_report
+          - generic [ref=f16e34]: Issue Log
+        - link "Change Log" [ref=f16e35] [cursor=pointer]:
+          - /url: /p/1/changes
+          - img [ref=f16e36]: sync_alt
+          - generic [ref=f16e37]: Change Log
+        - link "Quality" [ref=f16e38] [cursor=pointer]:
+          - /url: /p/1/quality
+          - img [ref=f16e39]: fact_check
+          - generic [ref=f16e40]: Quality
+        - link "Lessons" [ref=f16e41] [cursor=pointer]:
+          - /url: /p/1/lessons
+          - img [ref=f16e42]: school
+          - generic [ref=f16e43]: Lessons
+      - generic [ref=f16e44]:
+        - generic [ref=f16e45]: Reports
+        - link "Highlight" [ref=f16e46] [cursor=pointer]:
+          - /url: /p/1/reports/highlight
+          - img [ref=f16e47]: summarize
+          - generic [ref=f16e48]: Highlight
+        - link "Exceptions" [ref=f16e49] [cursor=pointer]:
+          - /url: /p/1/reports/exceptions
+          - img [ref=f16e50]: report_problem
+          - generic [ref=f16e51]: Exceptions
+      - generic [ref=f16e52]:
+        - generic [ref=f16e53]: Documents
+        - link "Documents" [ref=f16e54] [cursor=pointer]:
+          - /url: /p/1/documents
+          - img [ref=f16e55]: folder_open
+          - generic [ref=f16e56]: Documents
+        - link "Review Queue" [ref=f16e57] [cursor=pointer]:
+          - /url: /p/1/documents/review-queue
+          - img [ref=f16e58]: rate_review
+          - generic [ref=f16e59]: Review Queue
+    - link "Settings" [ref=f16e61] [cursor=pointer]:
+      - /url: /p/1/settings
+      - img [ref=f16e62]: settings
+      - generic [ref=f16e63]: Settings
+  - generic [ref=f16e64]:
+    - banner [ref=f16e66]:
+      - generic [ref=f16e67]:
+        - button "Toggle navigation" [ref=f16e68] [cursor=pointer]:
+          - img [ref=f16e69]: menu
+        - link "Princess home" [ref=f16e72] [cursor=pointer]:
+          - /url: /projects
+          - img "Princess" [ref=f16e73]
+        - button "Switch project" [ref=f16e74] [cursor=pointer]:
+          - generic [ref=f16e75]: One Core - Banka Sparkasse
+          - img [ref=f16e76]: expand_more
+      - button "Search (Ctrl+K)" [ref=f16e78] [cursor=pointer]:
+        - img [ref=f16e79]: search
+        - generic [ref=f16e80]:
+          - text: Search…
+          - generic [ref=f16e81]: ⌘K
+      - generic [ref=f16e84]:
+        - generic "Viewing as" [ref=f16e85]:
+          - generic [ref=f16e86]: Viewing as
+          - group [ref=f16e87]:
+            - button "PM" [pressed] [ref=f16e88] [cursor=pointer]
+            - button "PMO" [ref=f16e89] [cursor=pointer]
+            - button "TM" [ref=f16e90] [cursor=pointer]
+        - button "Notifications" [ref=f16e91] [cursor=pointer]:
+          - img "3 notifications" [ref=f16e92]:
+            - text: notifications_none
+            - generic: "3"
+        - button "User menu" [ref=f16e95] [cursor=pointer]:
+          - generic "Blaž Suhač" [ref=f16e97]: BS
+    - main [ref=f16e98]:
+      - generic [ref=f16e182]:
+        - generic [ref=f16e183]:
+          - button "Back to document" [ref=f16e184] [cursor=pointer]:
+            - img [ref=f16e185]: arrow_back
+          - generic [ref=f16e188]: Document Editor
+        - iframe [ref=f16e189]:
+          - application [active] [ref=f17e1]:
+            - generic [ref=f17e2]:
+              - img
+              - img
+              - img
+              - img [ref=f17e3]
+            - generic [ref=f17e15]:
+              - list [ref=f17e16]:
+                - listitem [ref=f17e17]
+                - listitem
+                - listitem [ref=f17e18]
+                - listitem
+                - listitem [ref=f17e19]
+                - listitem [ref=f17e20]
+              - list [ref=f17e21]:
+                - listitem [ref=f17e22]
+                - listitem
+                - listitem [ref=f17e23]
+                - listitem
+                - listitem [ref=f17e24]
+            - main [ref=f17e48]:
+              - generic [ref=f17e50]:
+                - toolbar [ref=f17e52]
+                - menubar "Left menu" [ref=f17e54]:
+                  - button "Find" [disabled] [ref=f17e55]
+                  - button "Headings" [disabled] [ref=f17e57]
+                  - button "Feedback & Support" [disabled] [ref=f17e59]
+                  - button "About" [disabled] [ref=f17e61]
+            - img [ref=f17e68]
+            - img

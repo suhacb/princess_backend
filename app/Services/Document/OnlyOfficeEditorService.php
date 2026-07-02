@@ -44,11 +44,14 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
             'created_by'      => $user->id,
         ]);
 
+        // Use the internal Garage endpoint so OnlyOffice (inside Docker) can fetch the file.
         $fileUrl = $currentVersion
-            ? $this->storage->temporaryUrl($project, $currentVersion->s3_key, now()->addMinutes(5))
+            ? $this->storage->internalTemporaryUrl($project, $currentVersion->s3_key, now()->addMinutes(5))
             : null;
 
-        $callbackUrl = route('onlyoffice.callback', ['key' => $uuid]);
+        // Use the internal app base URL when configured so OnlyOffice (inside Docker) can POST callbacks.
+        $callbackBase = rtrim(config('princess.onlyoffice.callback_base_url', config('app.url')), '/');
+        $callbackUrl  = $callbackBase . '/api/onlyoffice/callback/' . $uuid;
 
         return $this->client->generateEditorConfig($document, $version, $user, $callbackUrl, $fileUrl);
     }

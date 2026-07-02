@@ -45,7 +45,7 @@ class OnlyOfficeEditorConfigControllerTest extends TestCase
 
     private function url(): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/editor-config";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/editor-config";
     }
 
     // -------------------------------------------------------------------------
@@ -61,8 +61,8 @@ class OnlyOfficeEditorConfigControllerTest extends TestCase
 
         $this->getJson($this->url())
             ->assertOk()
-            ->assertJsonPath('document.key', 'uuid')
-            ->assertJsonPath('token', 'jwt');
+            ->assertJsonPath('data.document.key', 'uuid')
+            ->assertJsonPath('data.token', 'jwt');
     }
 
     public function test_open_session_receives_correct_document_and_person(): void
@@ -114,7 +114,7 @@ class OnlyOfficeEditorConfigControllerTest extends TestCase
         $other      = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->getJson("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/editor-config")
+        $this->getJson("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/editor-config")
             ->assertNotFound();
     }
 }
