@@ -80,6 +80,23 @@ class OnlyOfficeCallbackControllerTest extends TestCase
             ->assertJson(['error' => 0]);
     }
 
+    public function test_accepts_jwt_in_authorization_header(): void
+    {
+        $body    = ['status' => 1, 'key' => self::SESSION_KEY];
+        $signed  = $this->signedPayload($body);
+        $jwt     = $signed['token'];
+
+        $this->mock(OnlyOfficeEditorService::class)
+            ->shouldReceive('handleCallback')
+            ->withArgs(fn (string $k, array $p) => $k === self::SESSION_KEY && ($p['status'] ?? null) === 1)
+            ->once();
+
+        $this->withHeader('Authorization', "Bearer {$jwt}")
+            ->postJson($this->url(), $body)
+            ->assertOk()
+            ->assertJson(['error' => 0]);
+    }
+
     public function test_unauthenticated_request_is_accepted(): void
     {
         $this->mock(OnlyOfficeEditorService::class)->shouldReceive('handleCallback');

@@ -26,9 +26,11 @@ class OnlyOfficeCallbackController extends Controller
         OnlyOfficeEditorService $service,
     ): JsonResponse {
         $payload = $request->all();
+        // inBody=false (our config): token is in Authorization header, not body
+        $token = $request->bearerToken() ?? ($payload['token'] ?? '');
 
         try {
-            $dto = $client->parseCallback($payload, $payload['token'] ?? '');
+            $dto = $client->parseCallback($payload, $token);
 
             if ($dto->key === $key) {
                 $service->handleCallback($key, $payload);
