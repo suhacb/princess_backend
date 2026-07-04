@@ -6,7 +6,6 @@ use App\Clients\OnlyOfficeClient;
 use App\Services\Document\OnlyOfficeEditorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use InvalidArgumentException;
 
 /**
  * Unauthenticated callback endpoint called by the OnlyOffice Document Server.
@@ -30,7 +29,7 @@ class OnlyOfficeCallbackController extends Controller
         $token = $request->bearerToken() ?? ($payload['token'] ?? '');
 
         try {
-            $dto = $client->parseCallback($payload, $token);
+            $dto = $client->parseCallback($token);
 
             if ($dto->key === $key) {
                 $service->handleCallback($key, $payload);

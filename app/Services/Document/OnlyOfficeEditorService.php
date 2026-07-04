@@ -85,6 +85,14 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
 
     private function saveFile(DocumentVersion $version, string $url): void
     {
+        // OnlyOffice puts its public URL in the callback; rewrite to the internal
+        // Docker hostname so Laravel can fetch the file from inside the network.
+        $publicBase   = rtrim(config('princess.onlyoffice.public_url', ''), '/');
+        $internalBase = rtrim(config('princess.onlyoffice.url'), '/');
+        if ($publicBase && str_starts_with($url, $publicBase)) {
+            $url = $internalBase . substr($url, strlen($publicBase));
+        }
+
         $contents = Http::get($url)->body();
         $project  = $version->document->project;
 

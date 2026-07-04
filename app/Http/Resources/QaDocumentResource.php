@@ -23,6 +23,7 @@ class QaDocumentResource extends JsonResource
                 'id'   => $this->documentable_id,
             ]),
             'current_version'  => new DocumentVersionResource($this->whenLoaded('currentVersion')),
+            'versions_count'   => $this->versions_count,
             'status'           => $this->status,
             'supersedes_id'    => $this->supersedes_id,
             'review_notes'     => $this->review_notes,

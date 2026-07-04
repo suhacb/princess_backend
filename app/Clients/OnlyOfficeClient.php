@@ -59,11 +59,15 @@ class OnlyOfficeClient
      *
      * @throws InvalidArgumentException when the signature is invalid
      */
-    public function parseCallback(array $payload, string $token): OnlyOfficeCallbackDto
+    public function parseCallback(string $token): OnlyOfficeCallbackDto
     {
         $verified = $this->verify($token);
 
-        return OnlyOfficeCallbackDto::from($verified);
+        // OnlyOffice wraps the callback body under a 'payload' key in the JWT claims
+        // when token.enable.request.inbox is active (Authorization-header mode).
+        $claims = $verified['payload'] ?? $verified;
+
+        return OnlyOfficeCallbackDto::from($claims);
     }
 
     private function sign(array $payload): string

@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
 class DocumentVersionController extends Controller
 {
     /**
-     * List paginated version history for a document (oldest first).
+     * List paginated version history for a document (newest first).
      *
      * @response {"data": [{"id": 1, "version_number": 1, "file_name": "Plan v1.docx"}], "meta": {}, "links": {}}
      */
@@ -30,7 +30,10 @@ class DocumentVersionController extends Controller
 
         abort_if($qaDocument->project_id !== $project->id, 404);
 
-        $versions = $qaDocument->versions()->with('createdBy')->paginate(25);
+        $versions = $qaDocument->versions()
+            ->with('createdBy')
+            ->orderByDesc('version_number')
+            ->paginate(25);
 
         return DocumentVersionResource::collection($versions);
     }

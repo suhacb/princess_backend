@@ -47,7 +47,7 @@ class QaDocumentController extends Controller
             $query->where('status', $request->status);
         }
 
-        return QaDocumentResource::collection($query->with('currentVersion')->get());
+        return QaDocumentResource::collection($query->with('currentVersion')->withCount('versions')->get());
     }
 
     /**
@@ -102,7 +102,10 @@ class QaDocumentController extends Controller
     {
         $this->authorize('view', [QaDocument::class, $project, $qaDocument]);
 
-        return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable', 'currentVersion']));
+        $qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable', 'currentVersion']);
+        $qaDocument->loadCount('versions');
+
+        return new QaDocumentResource($qaDocument);
     }
 
     /**
