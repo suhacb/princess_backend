@@ -101,7 +101,9 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
             DB::table('document_versions')
                 ->where('id', $version->id)
                 ->update(['file_size_bytes' => strlen($contents)]);
-            $version->document->update(['current_version_id' => $version->id]);
+            DB::table('qa_documents')
+                ->where('id', $version->document_id)
+                ->update(['current_version_id' => $version->id, 'updated_at' => now()]);
         });
     }
 

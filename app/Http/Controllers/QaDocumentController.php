@@ -102,7 +102,7 @@ class QaDocumentController extends Controller
     {
         $this->authorize('view', [QaDocument::class, $project, $qaDocument]);
 
-        $qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable', 'currentVersion']);
+        $qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable', 'currentVersion.createdBy']);
         $qaDocument->loadCount('versions');
 
         return new QaDocumentResource($qaDocument);
