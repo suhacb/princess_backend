@@ -13,7 +13,6 @@ class DocumentVersionResource extends JsonResource
             'id'               => $this->id,
             'document_id'      => $this->document_id,
             'version_number'   => $this->version_number,
-            's3_key'           => $this->s3_key,
             'file_name'        => $this->file_name,
             'file_size_bytes'  => $this->file_size_bytes,
             'onlyoffice_key'   => $this->onlyoffice_key,

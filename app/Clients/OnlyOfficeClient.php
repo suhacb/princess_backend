@@ -81,6 +81,10 @@ class OnlyOfficeClient
 
     private function verify(string $token): array
     {
+        if ($this->jwtSecret === '') {
+            throw new InvalidArgumentException('OnlyOffice JWT secret is not configured.');
+        }
+
         $parts = explode('.', $token);
 
         if (count($parts) !== 3) {
@@ -88,6 +92,11 @@ class OnlyOfficeClient
         }
 
         [$header, $claims, $sig] = $parts;
+
+        $headerDecoded = json_decode(base64_decode(strtr($header, '-_', '+/')), true);
+        if (($headerDecoded['alg'] ?? null) !== 'HS256') {
+            throw new InvalidArgumentException('Unsupported JWT algorithm.');
+        }
 
         $expected = $this->base64url(hash_hmac('sha256', "{$header}.{$claims}", $this->jwtSecret, true));
 
@@ -99,6 +108,10 @@ class OnlyOfficeClient
 
         if (! is_array($decoded)) {
             throw new InvalidArgumentException('Invalid JWT payload.');
+        }
+
+        if (isset($decoded['exp']) && $decoded['exp'] < time()) {
+            throw new InvalidArgumentException('JWT has expired.');
         }
 
         return $decoded;

@@ -6,6 +6,7 @@ use App\Clients\OnlyOfficeClient;
 use App\Services\Document\OnlyOfficeEditorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Unauthenticated callback endpoint called by the OnlyOffice Document Server.
@@ -34,8 +35,11 @@ class OnlyOfficeCallbackController extends Controller
             if ($dto->key === $key) {
                 $service->handleCallback($key, $payload);
             }
-        } catch (\Throwable) {
-            // Swallow — OnlyOffice requires {"error": 0} regardless
+        } catch (\Throwable $e) {
+            Log::error('OnlyOffice callback failed', [
+                'key'       => $key,
+                'exception' => $e->getMessage(),
+            ]);
         }
 
         return response()->json(['error' => 0]);

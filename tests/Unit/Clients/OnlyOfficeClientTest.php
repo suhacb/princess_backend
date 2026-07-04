@@ -121,10 +121,10 @@ class OnlyOfficeClientTest extends TestCase
 
     public function test_parse_callback_returns_dto_for_valid_token(): void
     {
-        $payload  = ['status' => 2, 'key' => 'uuid-key', 'url' => 'https://onlyoffice/file'];
-        $token    = $this->signPayload($payload);
+        $payload = ['status' => 2, 'key' => 'uuid-key', 'url' => 'https://onlyoffice/file'];
+        $token   = $this->signPayload($payload);
 
-        $dto = $this->client->parseCallback($payload, $token);
+        $dto = $this->client->parseCallback($token);
 
         $this->assertSame(2, $dto->status);
         $this->assertSame('uuid-key', $dto->key);
@@ -136,7 +136,7 @@ class OnlyOfficeClientTest extends TestCase
         $payload = ['status' => 1, 'key' => 'uuid-key'];
         $token   = $this->signPayload($payload);
 
-        $dto = $this->client->parseCallback($payload, $token);
+        $dto = $this->client->parseCallback($token);
 
         $this->assertSame(1, $dto->status);
         $this->assertNull($dto->url);
@@ -149,14 +149,14 @@ class OnlyOfficeClientTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
 
-        $this->client->parseCallback($payload, $token);
+        $this->client->parseCallback($token);
     }
 
     public function test_parse_callback_throws_on_invalid_format(): void
     {
         $this->expectException(InvalidArgumentException::class);
 
-        $this->client->parseCallback([], 'not-a-jwt');
+        $this->client->parseCallback('not-a-jwt');
     }
 
     public function test_parse_callback_throws_when_signed_with_wrong_secret(): void
@@ -166,7 +166,30 @@ class OnlyOfficeClientTest extends TestCase
 
         $this->expectException(InvalidArgumentException::class);
 
-        $this->client->parseCallback($payload, $token);
+        $this->client->parseCallback($token);
+    }
+
+    public function test_parse_callback_unwraps_payload_wrapped_claims(): void
+    {
+        // OnlyOffice wraps callback body under a 'payload' key when inBody=false
+        $inner   = ['status' => 2, 'key' => 'uuid-key', 'url' => 'https://onlyoffice/file'];
+        $token   = $this->signPayload(['payload' => $inner]);
+
+        $dto = $this->client->parseCallback($token);
+
+        $this->assertSame(2, $dto->status);
+        $this->assertSame('uuid-key', $dto->key);
+    }
+
+    public function test_parse_callback_throws_when_secret_is_empty(): void
+    {
+        $client = new OnlyOfficeClient(jwtSecret: '', serverUrl: 'http://onlyoffice');
+        $token  = $this->signPayload(['status' => 1, 'key' => 'k']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('not configured');
+
+        $client->parseCallback($token);
     }
 
     // -------------------------------------------------------------------------

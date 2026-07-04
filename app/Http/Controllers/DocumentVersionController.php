@@ -32,7 +32,7 @@ class DocumentVersionController extends Controller
 
         $versions = $qaDocument->versions()
             ->with('createdBy')
-            ->orderByDesc('version_number')
+            ->reorder('version_number', 'desc')
             ->paginate(25);
 
         return DocumentVersionResource::collection($versions);
@@ -56,6 +56,7 @@ class DocumentVersionController extends Controller
         abort_if($version->document_id !== $qaDocument->id, 404);
 
         $newVersion = DB::transaction(function () use ($project, $qaDocument, $version, $storage) {
+            QaDocument::where('id', $qaDocument->id)->lockForUpdate()->firstOrFail();
             $nextNumber = $qaDocument->versions()->max('version_number') + 1;
             $newKey = "documents/{$qaDocument->id}/versions/{$nextNumber}/{$version->file_name}";
 
@@ -101,6 +102,7 @@ class DocumentVersionController extends Controller
         $newVersion = DB::transaction(function () use ($project, $qaDocument, $request, $storage, $file, $key) {
             $storage->put($project, $key, fopen($file->getRealPath(), 'r'));
 
+            QaDocument::where('id', $qaDocument->id)->lockForUpdate()->firstOrFail();
             $nextNumber = ($qaDocument->versions()->max('version_number') ?? 0) + 1;
 
             $newVersion = DocumentVersion::create([

@@ -252,6 +252,32 @@ class QaDocumentControllerTest extends TestCase
             ->assertJsonPath('data.id', $doc->id);
     }
 
+    public function test_show_includes_versions_count(): void
+    {
+        $doc = $this->makeDocument();
+        DocumentVersion::factory()->create(['document_id' => $doc->id, 'created_by' => $this->person->id, 'version_number' => 1]);
+        DocumentVersion::factory()->create(['document_id' => $doc->id, 'created_by' => $this->person->id, 'version_number' => 2]);
+
+        $this->getJson($this->documentUrl($doc))
+            ->assertOk()
+            ->assertJsonPath('data.versions_count', 2);
+    }
+
+    public function test_show_includes_current_version_creator(): void
+    {
+        $doc     = $this->makeDocument();
+        $version = DocumentVersion::factory()->create([
+            'document_id'    => $doc->id,
+            'created_by'     => $this->person->id,
+            'version_number' => 1,
+        ]);
+        $doc->update(['current_version_id' => $version->id]);
+
+        $this->getJson($this->documentUrl($doc))
+            ->assertOk()
+            ->assertJsonPath('data.current_version.created_by.id', $this->person->id);
+    }
+
     public function test_show_forbidden_for_non_member(): void
     {
         $doc      = $this->makeDocument();
@@ -280,6 +306,14 @@ class QaDocumentControllerTest extends TestCase
         $doc = $this->makeDocument(['status' => QaDocumentStatus::Confirmed->value]);
 
         $this->putJson($this->documentUrl($doc), ['title' => 'Trying to edit confirmed'])
+            ->assertUnprocessable();
+    }
+
+    public function test_update_blocked_on_superseded_document(): void
+    {
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::Superseded->value]);
+
+        $this->putJson($this->documentUrl($doc), ['title' => 'Trying to edit superseded'])
             ->assertUnprocessable();
     }
 
@@ -364,6 +398,11 @@ class QaDocumentControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', QaDocumentStatus::Draft->value)
             ->assertJsonPath('data.review_notes', 'Needs more detail in section 3.');
+
+        $this->assertDatabaseHas('qa_documents', [
+            'id'          => $doc->id,
+            'reviewed_by' => $assurancePerson->id,
+        ]);
     }
 
     public function test_reject_requires_review_notes(): void
@@ -410,7 +449,17 @@ class QaDocumentControllerTest extends TestCase
             'id'           => $doc->id,
             'status'       => QaDocumentStatus::Confirmed->value,
             'confirmed_by' => $assurancePerson->id,
+            'reviewed_by'  => $assurancePerson->id,
         ]);
+    }
+
+    public function test_confirm_blocked_when_confirmer_is_also_author(): void
+    {
+        // $this->person created the document; $this->user is the same person as PM
+        $doc = $this->makeDocument(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->postJson("/api/projects/{$this->project->id}/documents/{$doc->id}/confirm")
+            ->assertForbidden();
     }
 
     public function test_confirm_allowed_for_board_and_pm(): void

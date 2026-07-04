@@ -93,7 +93,13 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
             $url = $internalBase . substr($url, strlen($publicBase));
         }
 
-        $contents = Http::get($url)->body();
+        $response = Http::get($url);
+        throw_unless(
+            $response->successful() && strlen($response->body()) > 0,
+            \RuntimeException::class,
+            "OnlyOffice file download failed: HTTP {$response->status()}"
+        );
+        $contents = $response->body();
         $project  = $version->document->project;
 
         DB::transaction(function () use ($version, $project, $contents) {

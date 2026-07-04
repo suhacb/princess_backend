@@ -54,7 +54,8 @@ class QaDocumentPolicy
     public function confirm(User $user, Project $project, QaDocument $document): bool
     {
         return $document->project_id === $project->id
-            && $this->isConfirmer($user, $project);
+            && $this->isConfirmer($user, $project)
+            && $user->person_id !== $document->created_by;
     }
 
     private function isConfirmer(User $user, Project $project): bool

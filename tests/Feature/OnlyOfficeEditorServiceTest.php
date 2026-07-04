@@ -172,6 +172,21 @@ class OnlyOfficeEditorServiceTest extends TestCase
         $this->assertSame($version->id, $this->document->fresh()->current_version_id);
     }
 
+    public function test_status6_updates_file_size_bytes_and_current_version_id(): void
+    {
+        Http::fake(['*' => Http::response('force-saved-content', 200)]);
+
+        $version = $this->ghostVersion();
+
+        $this->triggerCallback($version, ['status' => 6, 'url' => 'https://onlyoffice/download/force-save']);
+
+        $this->assertDatabaseHas('document_versions', [
+            'id'              => $version->id,
+            'file_size_bytes' => strlen('force-saved-content'),
+        ]);
+        $this->assertSame($version->id, $this->document->fresh()->current_version_id);
+    }
+
     public function test_status2_followed_by_status4_keeps_version_and_marks_it_closed(): void
     {
         Http::fake(['*' => Http::response('content', 200)]);

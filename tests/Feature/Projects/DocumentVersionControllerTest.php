@@ -85,7 +85,7 @@ class DocumentVersionControllerTest extends TestCase
     // index
     // -------------------------------------------------------------------------
 
-    public function test_index_returns_versions_ordered_by_version_number(): void
+    public function test_index_returns_versions_newest_first(): void
     {
         $v2 = $this->makeVersion(['version_number' => 2, 's3_key' => 'documents/1/versions/2/doc.docx']);
         $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'documents/1/versions/1/doc.docx']);
@@ -93,8 +93,8 @@ class DocumentVersionControllerTest extends TestCase
         $this->getJson($this->indexUrl())
             ->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.version_number', 1)
-            ->assertJsonPath('data.1.version_number', 2)
+            ->assertJsonPath('data.0.version_number', 2)
+            ->assertJsonPath('data.1.version_number', 1)
             ->assertJsonStructure(['data', 'meta', 'links']);
     }
 
@@ -244,6 +244,22 @@ class DocumentVersionControllerTest extends TestCase
         $this->postJson($this->revertUrl($foreignVersion))->assertNotFound();
     }
 
+    public function test_revert_rejected_for_confirmed_document(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['status' => QaDocumentStatus::Confirmed->value]);
+
+        $this->postJson($this->revertUrl($v1))->assertForbidden();
+    }
+
+    public function test_revert_rejected_for_in_review_document(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->postJson($this->revertUrl($v1))->assertForbidden();
+    }
+
     // -------------------------------------------------------------------------
     // immutability guard
     // -------------------------------------------------------------------------
@@ -324,6 +340,14 @@ class DocumentVersionControllerTest extends TestCase
     public function test_upload_rejected_for_confirmed_document(): void
     {
         $this->document->update(['status' => QaDocumentStatus::Confirmed->value]);
+
+        $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
+            ->assertForbidden();
+    }
+
+    public function test_upload_rejected_for_in_review_document(): void
+    {
+        $this->document->update(['status' => QaDocumentStatus::InReview->value]);
 
         $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
             ->assertForbidden();
