@@ -17,20 +17,21 @@ class DocumentVersionPolicy
     public function revert(User $user, Project $project, QaDocument $document): bool
     {
         return $document->project_id === $project->id
+            && $document->status === QaDocumentStatus::Draft
             && $this->memberCan($user, $project, 'qa:manage');
     }
 
     public function openEditorSession(User $user, Project $project, QaDocument $document): bool
     {
         return $document->project_id === $project->id
-            && $document->status !== QaDocumentStatus::Confirmed
+            && $document->status === QaDocumentStatus::Draft
             && $this->memberCan($user, $project, 'qa:manage');
     }
 
     public function upload(User $user, Project $project, QaDocument $document): bool
     {
         return $document->project_id === $project->id
-            && $document->status !== QaDocumentStatus::Confirmed
+            && $document->status === QaDocumentStatus::Draft
             && $this->memberCan($user, $project, 'qa:manage');
     }
 

@@ -38,6 +38,16 @@ class GarageStorageService implements DocumentStorageDriver
         return $url;
     }
 
+    /**
+     * Like temporaryUrl() but skips the public endpoint rewrite.
+     * Use this for server-to-server fetches (e.g. OnlyOffice fetching the file)
+     * where the caller runs inside the Docker network and must reach Garage directly.
+     */
+    public function internalTemporaryUrl(Project $project, string $key, DateTimeInterface $expiry): string
+    {
+        return $this->disk($project)->temporaryUrl($key, $expiry);
+    }
+
     public function delete(Project $project, string $key): void
     {
         $this->disk($project)->delete($key);

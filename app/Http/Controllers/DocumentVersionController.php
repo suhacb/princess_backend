@@ -20,7 +20,7 @@ use Illuminate\Support\Str;
 class DocumentVersionController extends Controller
 {
     /**
-     * List paginated version history for a document (oldest first).
+     * List paginated version history for a document (newest first).
      *
      * @response {"data": [{"id": 1, "version_number": 1, "file_name": "Plan v1.docx"}], "meta": {}, "links": {}}
      */
@@ -30,7 +30,10 @@ class DocumentVersionController extends Controller
 
         abort_if($qaDocument->project_id !== $project->id, 404);
 
-        $versions = $qaDocument->versions()->with('createdBy')->paginate(25);
+        $versions = $qaDocument->versions()
+            ->with('createdBy')
+            ->reorder('version_number', 'desc')
+            ->paginate(25);
 
         return DocumentVersionResource::collection($versions);
     }
@@ -53,6 +56,7 @@ class DocumentVersionController extends Controller
         abort_if($version->document_id !== $qaDocument->id, 404);
 
         $newVersion = DB::transaction(function () use ($project, $qaDocument, $version, $storage) {
+            QaDocument::where('id', $qaDocument->id)->lockForUpdate()->firstOrFail();
             $nextNumber = $qaDocument->versions()->max('version_number') + 1;
             $newKey = "documents/{$qaDocument->id}/versions/{$nextNumber}/{$version->file_name}";
 
@@ -98,6 +102,7 @@ class DocumentVersionController extends Controller
         $newVersion = DB::transaction(function () use ($project, $qaDocument, $request, $storage, $file, $key) {
             $storage->put($project, $key, fopen($file->getRealPath(), 'r'));
 
+            QaDocument::where('id', $qaDocument->id)->lockForUpdate()->firstOrFail();
             $nextNumber = ($qaDocument->versions()->max('version_number') ?? 0) + 1;
 
             $newVersion = DocumentVersion::create([

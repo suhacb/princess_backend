@@ -13,6 +13,7 @@ class OnlyOfficeClient
     public function __construct(
         private readonly string $jwtSecret,
         private readonly string $serverUrl,
+        private readonly ?string $publicUrl = null,
     ) {}
 
     /**
@@ -46,7 +47,8 @@ class OnlyOfficeClient
             ],
         ];
 
-        $config['token'] = $this->sign($config);
+        $config['token']     = $this->sign($config);
+        $config['serverUrl'] = $this->publicUrl ?? $this->serverUrl;
 
         return $config;
     }
@@ -57,11 +59,15 @@ class OnlyOfficeClient
      *
      * @throws InvalidArgumentException when the signature is invalid
      */
-    public function parseCallback(array $payload, string $token): OnlyOfficeCallbackDto
+    public function parseCallback(string $token): OnlyOfficeCallbackDto
     {
         $verified = $this->verify($token);
 
-        return OnlyOfficeCallbackDto::from($verified);
+        // OnlyOffice wraps the callback body under a 'payload' key in the JWT claims
+        // when token.enable.request.inbox is active (Authorization-header mode).
+        $claims = $verified['payload'] ?? $verified;
+
+        return OnlyOfficeCallbackDto::from($claims);
     }
 
     private function sign(array $payload): string
@@ -75,6 +81,10 @@ class OnlyOfficeClient
 
     private function verify(string $token): array
     {
+        if ($this->jwtSecret === '') {
+            throw new InvalidArgumentException('OnlyOffice JWT secret is not configured.');
+        }
+
         $parts = explode('.', $token);
 
         if (count($parts) !== 3) {
@@ -82,6 +92,11 @@ class OnlyOfficeClient
         }
 
         [$header, $claims, $sig] = $parts;
+
+        $headerDecoded = json_decode(base64_decode(strtr($header, '-_', '+/')), true);
+        if (($headerDecoded['alg'] ?? null) !== 'HS256') {
+            throw new InvalidArgumentException('Unsupported JWT algorithm.');
+        }
 
         $expected = $this->base64url(hash_hmac('sha256', "{$header}.{$claims}", $this->jwtSecret, true));
 
@@ -93,6 +108,10 @@ class OnlyOfficeClient
 
         if (! is_array($decoded)) {
             throw new InvalidArgumentException('Invalid JWT payload.');
+        }
+
+        if (isset($decoded['exp']) && $decoded['exp'] < time()) {
+            throw new InvalidArgumentException('JWT has expired.');
         }
 
         return $decoded;

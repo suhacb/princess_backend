@@ -49,22 +49,22 @@ class DocumentVersionControllerTest extends TestCase
 
     private function indexUrl(): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/versions";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/versions";
     }
 
     private function revertUrl(DocumentVersion $version): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/versions/{$version->id}/revert";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/versions/{$version->id}/revert";
     }
 
     private function uploadUrl(): string
     {
-        return "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/upload";
+        return "/api/projects/{$this->project->id}/documents/{$this->document->id}/upload";
     }
 
     private function downloadUrl(?int $versionId = null): string
     {
-        $url = "/api/projects/{$this->project->id}/qa-documents/{$this->document->id}/download";
+        $url = "/api/projects/{$this->project->id}/documents/{$this->document->id}/download";
         return $versionId !== null ? "{$url}?version={$versionId}" : $url;
     }
 
@@ -85,7 +85,7 @@ class DocumentVersionControllerTest extends TestCase
     // index
     // -------------------------------------------------------------------------
 
-    public function test_index_returns_versions_ordered_by_version_number(): void
+    public function test_index_returns_versions_newest_first(): void
     {
         $v2 = $this->makeVersion(['version_number' => 2, 's3_key' => 'documents/1/versions/2/doc.docx']);
         $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'documents/1/versions/1/doc.docx']);
@@ -93,8 +93,8 @@ class DocumentVersionControllerTest extends TestCase
         $this->getJson($this->indexUrl())
             ->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.version_number', 1)
-            ->assertJsonPath('data.1.version_number', 2)
+            ->assertJsonPath('data.0.version_number', 2)
+            ->assertJsonPath('data.1.version_number', 1)
             ->assertJsonStructure(['data', 'meta', 'links']);
     }
 
@@ -119,7 +119,7 @@ class DocumentVersionControllerTest extends TestCase
         $other = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->getJson("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/versions")
+        $this->getJson("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/versions")
             ->assertNotFound();
     }
 
@@ -232,7 +232,7 @@ class DocumentVersionControllerTest extends TestCase
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
         $v1         = DocumentVersion::factory()->create(['document_id' => $foreignDoc->id, 'version_number' => 1, 's3_key' => 'k1', 'created_by' => $this->person->id]);
 
-        $this->postJson("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/versions/{$v1->id}/revert")
+        $this->postJson("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/versions/{$v1->id}/revert")
             ->assertNotFound();
     }
 
@@ -242,6 +242,22 @@ class DocumentVersionControllerTest extends TestCase
         $foreignVersion = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1', 'document_id' => $otherDoc->id]);
 
         $this->postJson($this->revertUrl($foreignVersion))->assertNotFound();
+    }
+
+    public function test_revert_rejected_for_confirmed_document(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['status' => QaDocumentStatus::Confirmed->value]);
+
+        $this->postJson($this->revertUrl($v1))->assertForbidden();
+    }
+
+    public function test_revert_rejected_for_in_review_document(): void
+    {
+        $v1 = $this->makeVersion(['version_number' => 1, 's3_key' => 'k1']);
+        $this->document->update(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->postJson($this->revertUrl($v1))->assertForbidden();
     }
 
     // -------------------------------------------------------------------------
@@ -329,6 +345,14 @@ class DocumentVersionControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_upload_rejected_for_in_review_document(): void
+    {
+        $this->document->update(['status' => QaDocumentStatus::InReview->value]);
+
+        $this->post($this->uploadUrl(), ['file' => $this->fakeDocx()])
+            ->assertForbidden();
+    }
+
     public function test_upload_rejected_for_invalid_file_type(): void
     {
         $pdf = UploadedFile::fake()->create('report.pdf', 512, 'application/pdf');
@@ -392,7 +416,7 @@ class DocumentVersionControllerTest extends TestCase
         $other      = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->post("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/upload", ['file' => $this->fakeDocx()])
+        $this->post("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/upload", ['file' => $this->fakeDocx()])
             ->assertNotFound();
     }
 
@@ -462,7 +486,7 @@ class DocumentVersionControllerTest extends TestCase
         $other      = Project::factory()->create(['created_by' => $this->person->id]);
         $foreignDoc = QaDocument::factory()->create(['project_id' => $other->id, 'created_by' => $this->person->id]);
 
-        $this->get("/api/projects/{$this->project->id}/qa-documents/{$foreignDoc->id}/download")
+        $this->get("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/download")
             ->assertNotFound();
     }
 

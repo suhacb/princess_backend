@@ -58,8 +58,10 @@ return [
     ],
 
     'onlyoffice' => [
-        'url'        => env('ONLYOFFICE_URL', 'http://onlyoffice'),
-        'jwt_secret' => env('ONLYOFFICE_JWT_SECRET', ''),
+        'url'              => env('ONLYOFFICE_URL', 'http://onlyoffice'),
+        'public_url'       => env('ONLYOFFICE_PUBLIC_URL'),
+        'callback_base_url'=> env('ONLYOFFICE_CALLBACK_BASE_URL'),
+        'jwt_secret'       => env('ONLYOFFICE_JWT_SECRET', ''),
     ],
 
     'documents' => [

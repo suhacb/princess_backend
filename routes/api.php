@@ -137,28 +137,28 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::post('projects/{project}/acceptance-criteria/{acceptanceCriterion}/approve', [AcceptanceCriterionController::class, 'approve'])
         ->name('projects.acceptance-criteria.approve');
 
-    Route::apiResource('projects.qa-documents', QaDocumentController::class)
-        ->parameters(['qa-documents' => 'qaDocument']);
-    Route::post('projects/{project}/qa-documents/{qaDocument}/send-for-review', [QaDocumentController::class, 'sendForReview'])
-        ->name('projects.qa-documents.send-for-review');
-    Route::post('projects/{project}/qa-documents/{qaDocument}/reject', [QaDocumentController::class, 'reject'])
-        ->name('projects.qa-documents.reject');
-    Route::post('projects/{project}/qa-documents/{qaDocument}/confirm', [QaDocumentController::class, 'confirm'])
-        ->name('projects.qa-documents.confirm');
-    Route::get('projects/{project}/qa-documents/{qaDocument}/versions', [DocumentVersionController::class, 'index'])
-        ->name('projects.qa-documents.versions.index');
-    Route::post('projects/{project}/qa-documents/{qaDocument}/versions/{version}/revert', [DocumentVersionController::class, 'revert'])
-        ->name('projects.qa-documents.versions.revert');
-    Route::post('projects/{project}/qa-documents/{qaDocument}/upload', [DocumentVersionController::class, 'upload'])
-        ->name('projects.qa-documents.upload');
-    Route::get('projects/{project}/qa-documents/{qaDocument}/download', [DocumentVersionController::class, 'download'])
-        ->name('projects.qa-documents.download');
-    Route::get('projects/{project}/qa-documents/{qaDocument}/editor-config', OnlyOfficeEditorConfigController::class)
-        ->name('projects.qa-documents.editor-config');
-    Route::post('projects/{project}/qa-documents/{qaDocument}/link', [DocumentLinkController::class, 'link'])
-        ->name('projects.qa-documents.link');
-    Route::delete('projects/{project}/qa-documents/{qaDocument}/link', [DocumentLinkController::class, 'unlink'])
-        ->name('projects.qa-documents.unlink');
+    Route::apiResource('projects.documents', QaDocumentController::class)
+        ->parameters(['documents' => 'qaDocument']);
+    Route::post('projects/{project}/documents/{qaDocument}/send-for-review', [QaDocumentController::class, 'sendForReview'])
+        ->name('projects.documents.send-for-review');
+    Route::post('projects/{project}/documents/{qaDocument}/reject', [QaDocumentController::class, 'reject'])
+        ->name('projects.documents.reject');
+    Route::post('projects/{project}/documents/{qaDocument}/confirm', [QaDocumentController::class, 'confirm'])
+        ->name('projects.documents.confirm');
+    Route::get('projects/{project}/documents/{qaDocument}/versions', [DocumentVersionController::class, 'index'])
+        ->name('projects.documents.versions.index');
+    Route::post('projects/{project}/documents/{qaDocument}/versions/{version}/revert', [DocumentVersionController::class, 'revert'])
+        ->name('projects.documents.versions.revert');
+    Route::post('projects/{project}/documents/{qaDocument}/upload', [DocumentVersionController::class, 'upload'])
+        ->name('projects.documents.upload');
+    Route::get('projects/{project}/documents/{qaDocument}/download', [DocumentVersionController::class, 'download'])
+        ->name('projects.documents.download');
+    Route::get('projects/{project}/documents/{qaDocument}/editor-config', OnlyOfficeEditorConfigController::class)
+        ->name('projects.documents.editor-config');
+    Route::post('projects/{project}/documents/{qaDocument}/link', [DocumentLinkController::class, 'link'])
+        ->name('projects.documents.link');
+    Route::delete('projects/{project}/documents/{qaDocument}/link', [DocumentLinkController::class, 'unlink'])
+        ->name('projects.documents.unlink');
 
     Route::apiResource('projects.test-scenarios', TestScenarioController::class)
         ->parameters(['test-scenarios' => 'testScenario']);

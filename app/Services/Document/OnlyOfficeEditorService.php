@@ -39,16 +39,19 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
             'version_number'  => ($document->versions()->max('version_number') ?? 0) + 1,
             's3_key'          => $s3Key,
             'file_name'       => $currentVersion?->file_name ?? "document.{$extension}",
-            'file_size_bytes' => $currentVersion?->file_size_bytes ?? 0,
+            'file_size_bytes' => 0, // updated to actual byte count when status-2 save occurs
             'onlyoffice_key'  => $uuid,
             'created_by'      => $user->id,
         ]);
 
+        // Use the internal Garage endpoint so OnlyOffice (inside Docker) can fetch the file.
         $fileUrl = $currentVersion
-            ? $this->storage->temporaryUrl($project, $currentVersion->s3_key, now()->addMinutes(5))
+            ? $this->storage->internalTemporaryUrl($project, $currentVersion->s3_key, now()->addMinutes(5))
             : null;
 
-        $callbackUrl = route('onlyoffice.callback', ['key' => $uuid]);
+        // Use the internal app base URL when configured so OnlyOffice (inside Docker) can POST callbacks.
+        $callbackBase = rtrim(config('princess.onlyoffice.callback_base_url', config('app.url')), '/');
+        $callbackUrl  = $callbackBase . '/api/onlyoffice/callback/' . $uuid;
 
         return $this->client->generateEditorConfig($document, $version, $user, $callbackUrl, $fileUrl);
     }
@@ -82,19 +85,44 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
 
     private function saveFile(DocumentVersion $version, string $url): void
     {
-        $contents = Http::get($url)->body();
+        // OnlyOffice puts its public URL in the callback; rewrite to the internal
+        // Docker hostname so Laravel can fetch the file from inside the network.
+        $publicBase   = rtrim(config('princess.onlyoffice.public_url', ''), '/');
+        $internalBase = rtrim(config('princess.onlyoffice.url'), '/');
+        if ($publicBase && str_starts_with($url, $publicBase)) {
+            $url = $internalBase . substr($url, strlen($publicBase));
+        }
+
+        $response = Http::get($url);
+        throw_unless(
+            $response->successful() && strlen($response->body()) > 0,
+            \RuntimeException::class,
+            "OnlyOffice file download failed: HTTP {$response->status()}"
+        );
+        $contents = $response->body();
         $project  = $version->document->project;
 
         DB::transaction(function () use ($version, $project, $contents) {
             $this->storage->put($project, $version->s3_key, $contents);
-            $version->document->update(['current_version_id' => $version->id]);
+            DB::table('document_versions')
+                ->where('id', $version->id)
+                ->update(['file_size_bytes' => strlen($contents)]);
+            DB::table('qa_documents')
+                ->where('id', $version->document_id)
+                ->update(['current_version_id' => $version->id, 'updated_at' => now()]);
         });
     }
 
     private function markClosed(DocumentVersion $version): void
     {
-        DB::table('document_versions')
-            ->where('id', $version->id)
-            ->update(['closed_without_changes' => true]);
+        if ($version->file_size_bytes === 0) {
+            // No file was ever saved for this session — remove the placeholder row
+            // so the version list does not fill up with ghost entries.
+            DB::table('document_versions')->where('id', $version->id)->delete();
+        } else {
+            DB::table('document_versions')
+                ->where('id', $version->id)
+                ->update(['closed_without_changes' => true]);
+        }
     }
 }

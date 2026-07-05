@@ -19,6 +19,7 @@ class DocumentServiceProvider extends ServiceProvider
         $this->app->singleton(OnlyOfficeClient::class, fn () => new OnlyOfficeClient(
             jwtSecret: config('princess.onlyoffice.jwt_secret', ''),
             serverUrl: config('princess.onlyoffice.url'),
+            publicUrl: config('princess.onlyoffice.public_url'),
         ));
 
         $this->app->bind(DocumentStorageDriver::class, function ($app) {

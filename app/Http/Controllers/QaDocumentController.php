@@ -47,7 +47,7 @@ class QaDocumentController extends Controller
             $query->where('status', $request->status);
         }
 
-        return QaDocumentResource::collection($query->get());
+        return QaDocumentResource::collection($query->with('currentVersion')->withCount('versions')->get());
     }
 
     /**
@@ -75,22 +75,22 @@ class QaDocumentController extends Controller
         $this->assertItemIdsValid($project, $type, $requirementIds);
         $this->assertSupersedesValid($project, $validated['supersedes_id'] ?? null);
 
-        $document = $project->qaDocuments()->create(array_merge($validated, [
+        $qaDocument = $project->qaDocuments()->create(array_merge($validated, [
             'status'     => QaDocumentStatus::Draft->value,
             'created_by' => auth()->user()->person_id,
         ]));
 
         if ($requirementIds) {
-            $document->requirements()->sync($requirementIds);
+            $qaDocument->requirements()->sync($requirementIds);
         }
 
         try {
-            app(TemplateService::class)->applyToDocument($document);
+            app(TemplateService::class)->applyToDocument($qaDocument);
         } catch (\Throwable) {
             // Template application is best-effort; never block document creation.
         }
 
-        return new QaDocumentResource($document->load(['requirements']));
+        return new QaDocumentResource($qaDocument->load(['requirements']));
     }
 
     /**
@@ -102,7 +102,10 @@ class QaDocumentController extends Controller
     {
         $this->authorize('view', [QaDocument::class, $project, $qaDocument]);
 
-        return new QaDocumentResource($qaDocument->load(['requirements', 'supersedes', 'confirmedBy', 'documentable']));
+        $qaDocument->load(['requirements', 'supersededBy', 'confirmedBy', 'documentable', 'currentVersion.createdBy', 'reviewedBy', 'createdBy', 'updatedBy']);
+        $qaDocument->loadCount('versions');
+
+        return new QaDocumentResource($qaDocument);
     }
 
     /**
@@ -116,9 +119,9 @@ class QaDocumentController extends Controller
         $this->authorize('update', [QaDocument::class, $project, $qaDocument]);
 
         abort_if(
-            $qaDocument->status === QaDocumentStatus::Confirmed,
+            in_array($qaDocument->status, [QaDocumentStatus::Confirmed, QaDocumentStatus::Superseded]),
             422,
-            'A confirmed document cannot be edited.'
+            'A confirmed or superseded document cannot be edited.'
         );
 
         $validated      = $request->validated();
@@ -177,10 +180,8 @@ class QaDocumentController extends Controller
         );
 
         $qaDocument->update([
-            'status'      => QaDocumentStatus::InReview->value,
-            'reviewed_by' => auth()->user()->person_id,
-            'reviewed_at' => now(),
-            'updated_by'  => auth()->user()->person_id,
+            'status'     => QaDocumentStatus::InReview->value,
+            'updated_by' => auth()->user()->person_id,
         ]);
 
         return new QaDocumentResource($qaDocument->fresh());
@@ -203,8 +204,10 @@ class QaDocumentController extends Controller
         );
 
         $qaDocument->update(array_merge($request->validated(), [
-            'status'     => QaDocumentStatus::Draft->value,
-            'updated_by' => auth()->user()->person_id,
+            'status'      => QaDocumentStatus::Draft->value,
+            'reviewed_by' => auth()->user()->person_id,
+            'reviewed_at' => now(),
+            'updated_by'  => auth()->user()->person_id,
         ]));
 
         return new QaDocumentResource($qaDocument->fresh());
@@ -249,6 +252,8 @@ class QaDocumentController extends Controller
                 'status'       => QaDocumentStatus::Confirmed->value,
                 'confirmed_by' => auth()->user()->person_id,
                 'confirmed_at' => now(),
+                'reviewed_by'  => auth()->user()->person_id,
+                'reviewed_at'  => now(),
                 'updated_by'   => auth()->user()->person_id,
             ]);
         });
