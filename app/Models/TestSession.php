@@ -80,7 +80,13 @@ class TestSession extends Model
         return 'TSR-' . str_pad($count + 1, 3, '0', STR_PAD_LEFT);
     }
 
-    public function recomputeAcStatus(): void
+    /**
+     * Recomputes the supplier_passed/client_passed test signal on every AC affected
+     * by this session's results. This never touches accepted_at or the decision
+     * fields — final acceptance is a human call (AcceptanceCriterion::decide*
+     * actions), not something a test result can set or revoke on its own.
+     */
+    public function recomputeAcStatus(int $actingPersonId): void
     {
         $affectedAcIds = $this->results()
             ->with('testScenario.acceptanceCriteria')
@@ -99,14 +105,10 @@ class TestSession extends Model
                 fn ($s) => $s->latestResultForTeam('client') === TestResultStatus::Pass->value
             );
 
-            $isAccepted  = $supplierPassed && $clientPassed;
-            $wasAccepted = $ac->accepted_at !== null;
-
-            $ac->update([
+            $ac->applyVersionedChange([
                 'supplier_passed' => $supplierPassed,
                 'client_passed'   => $clientPassed,
-                'accepted_at'     => $isAccepted && ! $wasAccepted ? now() : ($isAccepted ? $ac->accepted_at : null),
-            ]);
+            ], $actingPersonId);
         }
     }
 

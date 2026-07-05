@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcceptanceCriterionController;
+use App\Http\Controllers\AcceptanceCriterionVersionController;
 use App\Http\Controllers\DocumentTemplateController;
 use App\Http\Controllers\OnlyOfficeCallbackController;
 use App\Http\Controllers\OnlyOfficeEditorConfigController;
@@ -139,6 +140,12 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->parameters(['acceptance-criteria' => 'acceptanceCriterion']);
     Route::post('projects/{project}/acceptance-criteria/{acceptanceCriterion}/approve', [AcceptanceCriterionController::class, 'approve'])
         ->name('projects.acceptance-criteria.approve');
+    Route::post('projects/{project}/acceptance-criteria/{acceptanceCriterion}/supplier-decision', [AcceptanceCriterionController::class, 'supplierDecision'])
+        ->name('projects.acceptance-criteria.supplier-decision');
+    Route::post('projects/{project}/acceptance-criteria/{acceptanceCriterion}/client-decision', [AcceptanceCriterionController::class, 'clientDecision'])
+        ->name('projects.acceptance-criteria.client-decision');
+    Route::get('projects/{project}/acceptance-criteria/{acceptanceCriterion}/versions', [AcceptanceCriterionVersionController::class, 'index'])
+        ->name('projects.acceptance-criteria.versions.index');
 
     Route::apiResource('projects.documents', QaDocumentController::class)
         ->parameters(['documents' => 'qaDocument']);

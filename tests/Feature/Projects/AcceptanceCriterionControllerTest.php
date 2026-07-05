@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Projects;
 
+use App\Enums\AcceptanceCriterionDecision;
 use App\Enums\AcceptanceCriterionStatus;
 use App\Enums\ProjectRole;
 use App\Enums\RequirementType;
+use App\Enums\VerificationMethod;
 use App\Models\AcceptanceCriterion;
 use App\Models\Person;
 use App\Models\Project;
@@ -68,8 +70,18 @@ class AcceptanceCriterionControllerTest extends TestCase
     {
         return array_merge([
             'requirement_id' => $this->requirement->id,
+            'title'          => 'Response time criterion',
             'description'    => 'The system shall respond within 200ms',
         ], $overrides);
+    }
+
+    private function makeApprover(): User
+    {
+        $assurancePerson = Person::factory()->create();
+        $assurance       = User::factory()->create(['person_id' => $assurancePerson->id]);
+        $this->project->members()->create(['person_id' => $assurancePerson->id, 'role' => ProjectRole::ProjectAssurance->value]);
+
+        return $assurance;
     }
 
     // -------------------------------------------------------------------------
@@ -136,13 +148,47 @@ class AcceptanceCriterionControllerTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.ref', 'AC-001')
             ->assertJsonPath('data.status', AcceptanceCriterionStatus::Draft->value)
-            ->assertJsonPath('data.description', 'The system shall respond within 200ms');
+            ->assertJsonPath('data.title', 'Response time criterion')
+            ->assertJsonPath('data.description', 'The system shall respond within 200ms')
+            ->assertJsonPath('data.version', 1);
 
         $this->assertDatabaseHas('acceptance_criteria', [
             'project_id'     => $this->project->id,
             'requirement_id' => $this->requirement->id,
             'ref'            => 'AC-001',
+            'title'          => 'Response time criterion',
             'created_by'     => $this->person->id,
+        ]);
+    }
+
+    public function test_store_creates_initial_version_snapshot(): void
+    {
+        $response = $this->postJson($this->indexUrl(), $this->storePayload())->assertCreated();
+        $ac       = AcceptanceCriterion::find($response->json('data.id'));
+
+        $this->assertDatabaseHas('acceptance_criterion_versions', [
+            'acceptance_criterion_id' => $ac->id,
+            'version_number'          => 1,
+            'title'                   => 'Response time criterion',
+            'created_by'              => $this->person->id,
+        ]);
+    }
+
+    public function test_store_accepts_verifier_and_verification_method(): void
+    {
+        $verifierPerson = Person::factory()->create();
+        $this->project->members()->create(['person_id' => $verifierPerson->id, 'role' => ProjectRole::TeamMember->value]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload([
+            'verifier_id'         => $verifierPerson->id,
+            'verification_method' => VerificationMethod::Test->value,
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.verification_method', VerificationMethod::Test->value);
+
+        $this->assertDatabaseHas('acceptance_criteria', [
+            'verifier_id'         => $verifierPerson->id,
+            'verification_method' => VerificationMethod::Test->value,
         ]);
     }
 
@@ -172,6 +218,13 @@ class AcceptanceCriterionControllerTest extends TestCase
         $this->postJson($this->indexUrl(), $this->storePayload(['requirement_id' => null]))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('requirement_id');
+    }
+
+    public function test_store_requires_title(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
     }
 
     public function test_store_requires_description(): void
@@ -236,6 +289,32 @@ class AcceptanceCriterionControllerTest extends TestCase
         $this->putJson($this->criterionUrl($ac), ['description' => 'Updated criterion'])
             ->assertOk()
             ->assertJsonPath('data.description', 'Updated criterion');
+    }
+
+    public function test_update_creates_new_version_snapshot(): void
+    {
+        $ac = $this->makeCriterion(['version' => 1, 'title' => 'Original title']);
+
+        $this->putJson($this->criterionUrl($ac), ['title' => 'Updated title'])
+            ->assertOk()
+            ->assertJsonPath('data.version', 2);
+
+        $this->assertDatabaseHas('acceptance_criterion_versions', [
+            'acceptance_criterion_id' => $ac->id,
+            'version_number'          => 2,
+            'title'                   => 'Updated title',
+        ]);
+    }
+
+    public function test_update_with_no_actual_field_change_does_not_bump_version(): void
+    {
+        $ac = $this->makeCriterion(['version' => 1, 'description' => 'Same description']);
+
+        $this->putJson($this->criterionUrl($ac), ['description' => 'Same description'])
+            ->assertOk()
+            ->assertJsonPath('data.version', 1);
+
+        $this->assertDatabaseCount('acceptance_criterion_versions', 0);
     }
 
     public function test_update_forbidden_for_read_only_role(): void
@@ -328,5 +407,162 @@ class AcceptanceCriterionControllerTest extends TestCase
         $this->actingAs($assurance)
             ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/approve")
             ->assertStatus(409);
+    }
+
+    public function test_approve_creates_version_snapshot(): void
+    {
+        $ac = $this->makeCriterion(['status' => AcceptanceCriterionStatus::Draft->value, 'version' => 1]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/approve")
+            ->assertOk()
+            ->assertJsonPath('data.version', 2);
+
+        $this->assertDatabaseHas('acceptance_criterion_versions', [
+            'acceptance_criterion_id' => $ac->id,
+            'version_number'          => 2,
+            'status'                  => AcceptanceCriterionStatus::Approved->value,
+        ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // supplier-decision / client-decision
+    // -------------------------------------------------------------------------
+
+    public function test_supplier_decision_accepted_matching_computed_pass_does_not_require_note(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => true]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.supplier_decision', AcceptanceCriterionDecision::Accepted->value);
+    }
+
+    public function test_supplier_decision_rejecting_despite_computed_pass_requires_note(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => true]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Rejected->value,
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_supplier_decision_rejecting_despite_computed_pass_succeeds_with_note(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => true]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Rejected->value,
+                'note'     => 'Passed automated tests but manual review found a UX issue.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.supplier_decision', AcceptanceCriterionDecision::Rejected->value);
+    }
+
+    public function test_supplier_decision_accepting_despite_computed_fail_requires_note(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => false]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_supplier_decision_sets_decided_by_and_at(): void
+    {
+        $ac       = $this->makeCriterion(['supplier_passed' => true]);
+        $approver = $this->makeApprover();
+
+        $this->actingAs($approver)
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertOk();
+
+        $fresh = $ac->fresh();
+        $this->assertSame($approver->person_id, $fresh->supplier_decided_by);
+        $this->assertNotNull($fresh->supplier_decided_at);
+    }
+
+    public function test_supplier_decision_forbidden_for_project_manager(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => true]);
+
+        $this->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+            'decision' => AcceptanceCriterionDecision::Accepted->value,
+        ])->assertForbidden();
+    }
+
+    public function test_supplier_decision_creates_version_snapshot(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => true, 'version' => 1]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.version', 2);
+    }
+
+    public function test_accepted_at_set_only_once_both_sides_accepted(): void
+    {
+        $ac       = $this->makeCriterion(['supplier_passed' => true, 'client_passed' => true]);
+        $approver = $this->makeApprover();
+
+        $this->actingAs($approver)
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])->assertOk();
+
+        $this->assertNull($ac->fresh()->accepted_at);
+
+        $this->actingAs($approver)
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])->assertOk();
+
+        $this->assertNotNull($ac->fresh()->accepted_at);
+    }
+
+    public function test_accepted_at_cleared_when_either_side_rejected(): void
+    {
+        $ac       = $this->makeCriterion(['supplier_passed' => true, 'client_passed' => true]);
+        $approver = $this->makeApprover();
+
+        $this->actingAs($approver)->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+            'decision' => AcceptanceCriterionDecision::Accepted->value,
+        ])->assertOk();
+        $this->actingAs($approver)->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+            'decision' => AcceptanceCriterionDecision::Accepted->value,
+        ])->assertOk();
+
+        $this->assertNotNull($ac->fresh()->accepted_at);
+
+        $this->actingAs($approver)->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+            'decision' => AcceptanceCriterionDecision::Rejected->value,
+            'note'     => 'Regression found in UAT.',
+        ])->assertOk();
+
+        $this->assertNull($ac->fresh()->accepted_at);
+    }
+
+    public function test_decision_rejects_pending_value(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Pending->value,
+            ])
+            ->assertUnprocessable();
     }
 }

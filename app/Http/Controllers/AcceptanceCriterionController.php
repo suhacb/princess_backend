@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AcceptanceCriterionDecision;
 use App\Enums\AcceptanceCriterionStatus;
 use App\Enums\RequirementType;
 use App\Http\Requests\AcceptanceCriterion\AcceptanceCriterionRequest;
@@ -11,6 +12,8 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 /**
  * @tags Acceptance Criteria
@@ -31,7 +34,7 @@ class AcceptanceCriterionController extends Controller
     {
         $this->authorize('viewAny', [AcceptanceCriterion::class, $project]);
 
-        $query = $project->acceptanceCriteria()->with(['requirement'])->latest();
+        $query = $project->acceptanceCriteria()->with(['requirement', 'verifier'])->latest();
 
         if ($request->filled('requirement_id')) {
             $query->where('requirement_id', $request->requirement_id);
@@ -62,14 +65,25 @@ class AcceptanceCriterionController extends Controller
 
         $this->assertRequirementBelongsToProject($project, $validated['requirement_id']);
 
-        $validated['ref']        = AcceptanceCriterion::nextRef($project->id);
-        $validated['status']     = AcceptanceCriterionStatus::Draft->value;
-        $validated['project_id'] = $project->id;
-        $validated['created_by'] = auth()->user()->person_id;
+        $validated['ref']               = AcceptanceCriterion::nextRef($project->id);
+        $validated['status']            = AcceptanceCriterionStatus::Draft->value;
+        $validated['version']           = 1;
+        $validated['supplier_passed']   = false;
+        $validated['client_passed']     = false;
+        $validated['supplier_decision'] = AcceptanceCriterionDecision::Pending->value;
+        $validated['client_decision']   = AcceptanceCriterionDecision::Pending->value;
+        $validated['project_id']        = $project->id;
+        $validated['created_by']        = auth()->user()->person_id;
 
-        $criterion = AcceptanceCriterion::create($validated);
+        $criterion = DB::transaction(function () use ($validated) {
+            $criterion = AcceptanceCriterion::create($validated);
 
-        return new AcceptanceCriterionResource($criterion->load(['requirement']));
+            $criterion->snapshotVersion($criterion->created_by);
+
+            return $criterion;
+        });
+
+        return new AcceptanceCriterionResource($criterion->load(['requirement', 'verifier']));
     }
 
     /**
@@ -81,7 +95,9 @@ class AcceptanceCriterionController extends Controller
     {
         $this->authorize('view', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
 
-        return new AcceptanceCriterionResource($acceptanceCriterion->load(['requirement', 'approvedBy']));
+        return new AcceptanceCriterionResource($acceptanceCriterion->load([
+            'requirement', 'verifier', 'approvedBy', 'supplierDecidedBy', 'clientDecidedBy',
+        ]));
     }
 
     /**
@@ -93,12 +109,12 @@ class AcceptanceCriterionController extends Controller
     {
         $this->authorize('update', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
 
-        $acceptanceCriterion->update(array_merge(
-            $request->validated(),
-            ['updated_by' => auth()->user()->person_id]
-        ));
+        $validated               = $request->validated();
+        $validated['updated_by'] = auth()->user()->person_id;
 
-        return new AcceptanceCriterionResource($acceptanceCriterion->fresh()->load(['requirement']));
+        $acceptanceCriterion->applyVersionedChange($validated, auth()->user()->person_id);
+
+        return new AcceptanceCriterionResource($acceptanceCriterion->fresh()->load(['requirement', 'verifier']));
     }
 
     /**
@@ -116,7 +132,8 @@ class AcceptanceCriterionController extends Controller
     }
 
     /**
-     * Approve an acceptance criterion (marks it as accepted).
+     * Approve an acceptance criterion (marks the criterion definition itself as approved —
+     * independent of the supplier/client pass-fail sign-off below).
      *
      * @response {"data": {"id": 1, "status": "approved"}}
      * @response 409 {"message": "Acceptance criterion is already approved."}
@@ -131,14 +148,89 @@ class AcceptanceCriterionController extends Controller
             'Acceptance criterion is already approved.'
         );
 
-        $acceptanceCriterion->update([
+        $acceptanceCriterion->applyVersionedChange([
             'status'      => AcceptanceCriterionStatus::Approved->value,
             'approved_by' => auth()->user()->person_id,
             'approved_at' => now(),
             'updated_by'  => auth()->user()->person_id,
-        ]);
+        ], auth()->user()->person_id);
 
         return new AcceptanceCriterionResource($acceptanceCriterion->fresh()->load(['approvedBy']));
+    }
+
+    /**
+     * Record the supplier-side sign-off decision. This is a human judgment informed by
+     * (but not bound to) the automated supplier_passed test signal — a note is required
+     * only when the decision contradicts that signal (e.g. rejecting despite a pass).
+     *
+     * @response {"data": {"id": 1, "supplier_decision": "accepted"}}
+     * @response 422 {"message": "A note is required when the decision contradicts the test result."}
+     */
+    public function supplierDecision(Request $request, Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
+    {
+        $this->authorize('decide', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
+
+        $decision = $this->validateDecision($request, $acceptanceCriterion->supplier_passed);
+
+        $acceptanceCriterion->applyVersionedChange([
+            'supplier_decision'      => $decision['decision']->value,
+            'supplier_decided_by'    => auth()->user()->person_id,
+            'supplier_decided_at'    => now(),
+            'supplier_decision_note' => $decision['note'],
+            'updated_by'             => auth()->user()->person_id,
+        ], auth()->user()->person_id, fn (AcceptanceCriterion $locked) => $locked->recomputeAccepted());
+
+        return new AcceptanceCriterionResource($acceptanceCriterion->fresh()->load(['supplierDecidedBy', 'clientDecidedBy']));
+    }
+
+    /**
+     * Record the client-side sign-off decision. Same rules as supplierDecision() but for
+     * the client_passed signal.
+     *
+     * @response {"data": {"id": 1, "client_decision": "accepted"}}
+     * @response 422 {"message": "A note is required when the decision contradicts the test result."}
+     */
+    public function clientDecision(Request $request, Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
+    {
+        $this->authorize('decide', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
+
+        $decision = $this->validateDecision($request, $acceptanceCriterion->client_passed);
+
+        $acceptanceCriterion->applyVersionedChange([
+            'client_decision'      => $decision['decision']->value,
+            'client_decided_by'    => auth()->user()->person_id,
+            'client_decided_at'    => now(),
+            'client_decision_note' => $decision['note'],
+            'updated_by'           => auth()->user()->person_id,
+        ], auth()->user()->person_id, fn (AcceptanceCriterion $locked) => $locked->recomputeAccepted());
+
+        return new AcceptanceCriterionResource($acceptanceCriterion->fresh()->load(['supplierDecidedBy', 'clientDecidedBy']));
+    }
+
+    /**
+     * @return array{decision: AcceptanceCriterionDecision, note: ?string}
+     */
+    private function validateDecision(Request $request, bool $computedPassed): array
+    {
+        $validated = $request->validate([
+            'decision' => ['required', Rule::enum(AcceptanceCriterionDecision::class)],
+            'note'     => ['nullable', 'string'],
+        ]);
+
+        $decision = AcceptanceCriterionDecision::from($validated['decision']);
+
+        abort_if($decision === AcceptanceCriterionDecision::Pending, 422, 'Decision must be accepted or rejected.');
+
+        $contradictsComputedSignal = ($decision === AcceptanceCriterionDecision::Rejected && $computedPassed)
+            || ($decision === AcceptanceCriterionDecision::Accepted && ! $computedPassed);
+
+        abort_if(
+            $contradictsComputedSignal && empty($validated['note']),
+            422,
+            'A note is required when the decision contradicts the test result.'
+        );
+
+        return ['decision' => $decision, 'note' => $validated['note'] ?? null];
     }
 
     private function assertRequirementBelongsToProject(Project $project, int $requirementId): void
