@@ -3,6 +3,7 @@
 namespace App\Services\Document;
 
 use App\Contracts\DocumentEditorDriver;
+use App\Models\DocumentVersion;
 use App\Models\Person;
 use App\Models\QaDocument;
 
@@ -20,7 +21,7 @@ use App\Models\QaDocument;
  */
 class M365EditorService implements DocumentEditorDriver
 {
-    public function openSession(QaDocument $document, Person $user): array
+    public function openSession(QaDocument $document, Person $user, ?DocumentVersion $requestedVersion = null): array
     {
         throw new \RuntimeException('M365 editor driver not yet implemented.');
     }

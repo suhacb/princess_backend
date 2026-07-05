@@ -27,18 +27,28 @@ class OnlyOfficeClient
         Person $user,
         string $callbackUrl,
         ?string $fileUrl,
+        bool $readOnly = false,
     ): array {
         $extension = strtolower(pathinfo($version->file_name, PATHINFO_EXTENSION) ?: 'docx');
 
+        // Historical versions never have an onlyoffice_key (only editing-session
+        // placeholder versions do), so read-only view sessions get a synthetic,
+        // stable-per-version key instead of relying on that column.
+        $key = $readOnly ? "ro-{$version->id}" : $version->onlyoffice_key;
+
         $config = [
             'document' => [
-                'fileType' => $extension,
-                'key'      => $version->onlyoffice_key,
-                'title'    => $document->title,
-                'url'      => $fileUrl,
+                'fileType'    => $extension,
+                'key'         => $key,
+                'title'       => $document->title,
+                'url'         => $fileUrl,
+                'permissions' => [
+                    'edit' => ! $readOnly,
+                ],
             ],
             'documentType' => 'word',
             'editorConfig' => [
+                'mode'        => $readOnly ? 'view' : 'edit',
                 'callbackUrl' => $callbackUrl,
                 'user'        => [
                     'id'   => (string) $user->id,

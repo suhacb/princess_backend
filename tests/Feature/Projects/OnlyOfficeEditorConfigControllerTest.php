@@ -117,4 +117,48 @@ class OnlyOfficeEditorConfigControllerTest extends TestCase
         $this->getJson("/api/projects/{$this->project->id}/documents/{$foreignDoc->id}/editor-config")
             ->assertNotFound();
     }
+
+    // -------------------------------------------------------------------------
+    // version_id — regression coverage for #131
+    // -------------------------------------------------------------------------
+
+    public function test_version_id_is_passed_through_to_the_editor_driver(): void
+    {
+        $version = \App\Models\DocumentVersion::factory()->create([
+            'document_id' => $this->document->id,
+            'created_by'  => $this->person->id,
+        ]);
+
+        $this->mock(DocumentEditorDriver::class)
+            ->shouldReceive('openSession')
+            ->withArgs(fn ($doc, $person, $requestedVersion) => $requestedVersion?->is($version) === true)
+            ->once()
+            ->andReturn(['token' => 'jwt']);
+
+        $this->getJson($this->url() . "?version_id={$version->id}")->assertOk();
+    }
+
+    public function test_returns_404_for_nonexistent_version_id(): void
+    {
+        $this->getJson($this->url() . '?version_id=999999')->assertNotFound();
+    }
+
+    public function test_returns_404_for_version_id_belonging_to_another_document(): void
+    {
+        $otherDoc = QaDocument::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+        $foreignVersion = \App\Models\DocumentVersion::factory()->create([
+            'document_id' => $otherDoc->id,
+            'created_by'  => $this->person->id,
+        ]);
+
+        $this->getJson($this->url() . "?version_id={$foreignVersion->id}")->assertNotFound();
+    }
+
+    public function test_returns_422_for_non_numeric_version_id(): void
+    {
+        $this->getJson($this->url() . '?version_id=not-a-number')->assertUnprocessable();
+    }
 }
