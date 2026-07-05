@@ -33,7 +33,9 @@ class OnlyOfficeEditorServiceTest extends TestCase
 
         $this->mock(GarageStorageService::class)
             ->shouldReceive('put')
-            ->andReturnNull();
+            ->andReturnNull()
+            ->shouldReceive('internalTemporaryUrl')
+            ->andReturnUsing(fn ($project, $s3Key) => "https://garage.internal/{$s3Key}");
 
         $this->service = app(OnlyOfficeEditorService::class);
     }
@@ -59,6 +61,18 @@ class OnlyOfficeEditorServiceTest extends TestCase
             'document_id'     => $this->document->id,
             'version_number'  => $versionNumber,
             'onlyoffice_key'  => 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            'file_size_bytes' => 65_536,
+            'created_by'      => $this->person->id,
+        ]);
+    }
+
+    /** Like savedVersion() but with a distinct onlyoffice_key, for tests that need two saved versions. */
+    private function otherSavedVersion(int $versionNumber): DocumentVersion
+    {
+        return DocumentVersion::factory()->create([
+            'document_id'     => $this->document->id,
+            'version_number'  => $versionNumber,
+            'onlyoffice_key'  => 'b1ffcd00-8d1c-5f09-cc7e-7cc0ce491b22',
             'file_size_bytes' => 65_536,
             'created_by'      => $this->person->id,
         ]);
@@ -203,5 +217,62 @@ class OnlyOfficeEditorServiceTest extends TestCase
             'id'                     => $version->id,
             'closed_without_changes' => true,
         ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // openSession — regression coverage for #131 (version_id ignored)
+    // -------------------------------------------------------------------------
+
+    public function test_open_session_without_requested_version_creates_editable_placeholder(): void
+    {
+        $current = $this->savedVersion();
+        $this->document->update(['current_version_id' => $current->id]);
+
+        $countBefore = DocumentVersion::where('document_id', $this->document->id)->count();
+
+        $config = $this->service->openSession($this->document->fresh(), $this->person);
+
+        $this->assertSame($countBefore + 1, DocumentVersion::where('document_id', $this->document->id)->count());
+        $this->assertTrue($config['document']['permissions']['edit']);
+        $this->assertSame('edit', $config['editorConfig']['mode']);
+    }
+
+    public function test_open_session_with_current_version_id_is_still_editable(): void
+    {
+        $current = $this->savedVersion();
+        $this->document->update(['current_version_id' => $current->id]);
+
+        $config = $this->service->openSession($this->document->fresh(), $this->person, $current);
+
+        $this->assertTrue($config['document']['permissions']['edit']);
+        $this->assertSame('edit', $config['editorConfig']['mode']);
+    }
+
+    public function test_open_session_with_historical_version_is_read_only_and_serves_that_versions_file(): void
+    {
+        $historical = $this->savedVersion(versionNumber: 1);
+        $current    = $this->otherSavedVersion(versionNumber: 2);
+        $this->document->update(['current_version_id' => $current->id]);
+
+        $countBefore = DocumentVersion::where('document_id', $this->document->id)->count();
+
+        $config = $this->service->openSession($this->document->fresh(), $this->person, $historical);
+
+        $this->assertSame($countBefore, DocumentVersion::where('document_id', $this->document->id)->count());
+        $this->assertFalse($config['document']['permissions']['edit']);
+        $this->assertSame('view', $config['editorConfig']['mode']);
+        $this->assertSame("https://garage.internal/{$historical->s3_key}", $config['document']['url']);
+    }
+
+    public function test_open_session_with_historical_version_does_not_reuse_current_versions_key(): void
+    {
+        $historical = $this->savedVersion(versionNumber: 1);
+        $current    = $this->otherSavedVersion(versionNumber: 2);
+        $this->document->update(['current_version_id' => $current->id]);
+
+        $config = $this->service->openSession($this->document->fresh(), $this->person, $historical);
+
+        $this->assertNotSame($historical->onlyoffice_key, $config['document']['key']);
+        $this->assertNotSame($current->onlyoffice_key, $config['document']['key']);
     }
 }

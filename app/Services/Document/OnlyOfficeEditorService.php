@@ -19,16 +19,48 @@ class OnlyOfficeEditorService implements DocumentEditorDriver
     ) {}
 
     /**
-     * Open an OnlyOffice editing session for $document as $user.
+     * Open an OnlyOffice session for $document as $user.
      *
-     * Creates a new document_versions row with a fresh onlyoffice_key UUID,
-     * generates a presigned S3 download URL for the current file (so OnlyOffice
-     * can fetch it), and returns a JWT-signed editor config for the frontend.
+     * When $requestedVersion is given and is not the document's current
+     * version, opens it read-only: only the current version can ever be
+     * edited (older versions must be reverted to first), so no placeholder
+     * document_versions row is created and OnlyOffice is told not to allow
+     * edits.
+     *
+     * Otherwise (no $requestedVersion, or it matches the current version)
+     * opens an editable session on the current version: creates a new
+     * document_versions row with a fresh onlyoffice_key UUID, generates a
+     * presigned S3 download URL for the current file (so OnlyOffice can
+     * fetch it), and returns a JWT-signed editor config for the frontend.
      */
-    public function openSession(QaDocument $document, Person $user): array
+    public function openSession(QaDocument $document, Person $user, ?DocumentVersion $requestedVersion = null): array
     {
+        $project = $document->project;
+
+        $isReadOnly = $requestedVersion !== null
+            && $requestedVersion->id !== $document->current_version_id;
+
+        if ($isReadOnly) {
+            $fileUrl = $this->storage->internalTemporaryUrl(
+                $project,
+                $requestedVersion->s3_key,
+                now()->addMinutes(5),
+            );
+
+            $callbackBase = rtrim(config('princess.onlyoffice.callback_base_url', config('app.url')), '/');
+            $callbackUrl  = $callbackBase . '/api/onlyoffice/callback/' . (string) Str::uuid();
+
+            return $this->client->generateEditorConfig(
+                $document,
+                $requestedVersion,
+                $user,
+                $callbackUrl,
+                $fileUrl,
+                readOnly: true,
+            );
+        }
+
         $currentVersion = $document->currentVersion;
-        $project        = $document->project;
 
         $uuid      = (string) Str::uuid();
         $extension = $currentVersion ? strtolower(pathinfo($currentVersion->file_name, PATHINFO_EXTENSION) ?: 'docx') : 'docx';
