@@ -84,6 +84,9 @@ class GarageStorageService implements DocumentStorageDriver
             'endpoint'                => config('princess.garage.s3_endpoint'),
             'use_path_style_endpoint' => true,
             'throw'                   => true,
+            // Garage does not support GetObjectAcl, which Flysystem's copy()
+            // calls by default to preserve the source object's visibility.
+            'retain_visibility'       => false,
         ]);
     }
 
@@ -98,6 +101,7 @@ class GarageStorageService implements DocumentStorageDriver
             'endpoint'                => config('princess.garage.s3_endpoint'),
             'use_path_style_endpoint' => true,
             'throw'                   => true,
+            'retain_visibility'       => false,
         ]);
     }
 }
