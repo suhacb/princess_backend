@@ -19,6 +19,11 @@ use Illuminate\Support\Facades\DB;
  */
 class RequirementController extends Controller
 {
+    /** Fields snapshotted into requirement_versions; a version is only bumped when one of these actually changes. */
+    private const VERSIONED_FIELDS = [
+        'title', 'description', 'type', 'priority', 'status', 'role', 'action', 'benefit', 'owner_id',
+    ];
+
     /**
      * List requirements for a project.
      *
@@ -88,6 +93,31 @@ class RequirementController extends Controller
     }
 
     /**
+     * Applies $attributes to $requirement and, only if any versioned field
+     * actually changes, bumps version and snapshots it. Locks the row first
+     * so concurrent requests can't race to the same next version number.
+     */
+    private function applyVersionedChange(Requirement $requirement, array $attributes): void
+    {
+        DB::transaction(function () use ($requirement, $attributes) {
+            $locked = Requirement::where('id', $requirement->id)->lockForUpdate()->firstOrFail();
+
+            $locked->fill($attributes);
+            $contentChanged = $locked->isDirty(self::VERSIONED_FIELDS);
+
+            if ($contentChanged) {
+                $locked->version += 1;
+            }
+
+            $locked->save();
+
+            if ($contentChanged) {
+                $this->snapshotVersion($locked);
+            }
+        });
+    }
+
+    /**
      * Get a requirement with its children and acceptance criteria.
      *
      * @response {"data": {"id": 1, "ref": "REQ-001", "acceptance_criteria": []}}
@@ -116,14 +146,9 @@ class RequirementController extends Controller
             $this->assertParentValid($project, $validated);
         }
 
-        DB::transaction(function () use ($requirement, $validated) {
-            $requirement->update(array_merge($validated, [
-                'version'    => $requirement->version + 1,
-                'updated_by' => auth()->user()->person_id,
-            ]));
+        $validated['updated_by'] = auth()->user()->person_id;
 
-            $this->snapshotVersion($requirement);
-        });
+        $this->applyVersionedChange($requirement, $validated);
 
         return new RequirementResource($requirement->fresh()->load(['owner']));
     }
@@ -158,7 +183,7 @@ class RequirementController extends Controller
             'Only draft requirements can be sent for review.'
         );
 
-        $requirement->update([
+        $this->applyVersionedChange($requirement, [
             'status'     => RequirementStatus::Reviewed->value,
             'updated_by' => auth()->user()->person_id,
         ]);
@@ -182,7 +207,7 @@ class RequirementController extends Controller
             'Only reviewed requirements can be approved.'
         );
 
-        $requirement->update([
+        $this->applyVersionedChange($requirement, [
             'status'      => RequirementStatus::Approved->value,
             'approved_by' => auth()->user()->person_id,
             'approved_at' => now(),
@@ -208,7 +233,7 @@ class RequirementController extends Controller
             'Only reviewed requirements can be rejected.'
         );
 
-        $requirement->update([
+        $this->applyVersionedChange($requirement, [
             'status'     => RequirementStatus::Rejected->value,
             'updated_by' => auth()->user()->person_id,
         ]);
@@ -225,7 +250,7 @@ class RequirementController extends Controller
     {
         $this->authorize('defer', [Requirement::class, $project, $requirement]);
 
-        $requirement->update([
+        $this->applyVersionedChange($requirement, [
             'status'     => RequirementStatus::Deferred->value,
             'updated_by' => auth()->user()->person_id,
         ]);
@@ -236,20 +261,17 @@ class RequirementController extends Controller
     /** Snapshots the requirement's current versioned fields as its current version_number. */
     private function snapshotVersion(Requirement $requirement): void
     {
-        RequirementVersion::create([
+        $fields = collect(self::VERSIONED_FIELDS)->mapWithKeys(function (string $field) use ($requirement) {
+            $value = $requirement->{$field};
+
+            return [$field => $value instanceof \BackedEnum ? $value->value : $value];
+        })->all();
+
+        RequirementVersion::create(array_merge($fields, [
             'requirement_id' => $requirement->id,
             'version_number' => $requirement->version,
-            'title'          => $requirement->title,
-            'description'    => $requirement->description,
-            'type'           => $requirement->type->value,
-            'priority'       => $requirement->priority->value,
-            'status'         => $requirement->status->value,
-            'role'           => $requirement->role,
-            'action'         => $requirement->action,
-            'benefit'        => $requirement->benefit,
-            'owner_id'       => $requirement->owner_id,
             'created_by'     => auth()->user()->person_id,
-        ]);
+        ]));
     }
 
     private function assertParentValid(Project $project, array $validated): void

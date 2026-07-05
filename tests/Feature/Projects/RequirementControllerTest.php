@@ -335,6 +335,29 @@ class RequirementControllerTest extends TestCase
             ->assertJsonPath('data.version', 2);
     }
 
+    public function test_update_with_only_untracked_field_does_not_bump_version_or_snapshot(): void
+    {
+        $req = $this->makeRequirement(['version' => 1, 'source' => 'original source']);
+
+        $this->putJson($this->requirementUrl($req), ['source' => 'updated source'])
+            ->assertOk()
+            ->assertJsonPath('data.version', 1);
+
+        $this->assertDatabaseHas('requirements', ['id' => $req->id, 'source' => 'updated source', 'version' => 1]);
+        $this->assertDatabaseCount('requirement_versions', 0);
+    }
+
+    public function test_update_with_no_actual_field_change_does_not_bump_version_or_snapshot(): void
+    {
+        $req = $this->makeRequirement(['version' => 1, 'title' => 'Same title']);
+
+        $this->putJson($this->requirementUrl($req), ['title' => 'Same title'])
+            ->assertOk()
+            ->assertJsonPath('data.version', 1);
+
+        $this->assertDatabaseCount('requirement_versions', 0);
+    }
+
     public function test_update_creates_new_version_snapshot(): void
     {
         $req = $this->makeRequirement(['version' => 1, 'title' => 'Original title']);
@@ -410,11 +433,18 @@ class RequirementControllerTest extends TestCase
 
     public function test_review_transitions_draft_to_reviewed(): void
     {
-        $req = $this->makeRequirement(['status' => RequirementStatus::Draft->value]);
+        $req = $this->makeRequirement(['status' => RequirementStatus::Draft->value, 'version' => 1]);
 
         $this->postJson("/api/projects/{$this->project->id}/requirements/{$req->id}/review")
             ->assertOk()
-            ->assertJsonPath('data.status', RequirementStatus::Reviewed->value);
+            ->assertJsonPath('data.status', RequirementStatus::Reviewed->value)
+            ->assertJsonPath('data.version', 2);
+
+        $this->assertDatabaseHas('requirement_versions', [
+            'requirement_id' => $req->id,
+            'version_number'  => 2,
+            'status'          => RequirementStatus::Reviewed->value,
+        ]);
     }
 
     public function test_review_returns_409_if_not_draft(): void
@@ -511,6 +541,30 @@ class RequirementControllerTest extends TestCase
                 ->assertOk()
                 ->assertJsonPath('data.status', RequirementStatus::Deferred->value);
         }
+    }
+
+    public function test_defer_creates_version_snapshot(): void
+    {
+        $req = $this->makeRequirement(['status' => RequirementStatus::Draft->value, 'version' => 1]);
+
+        $this->postJson("/api/projects/{$this->project->id}/requirements/{$req->id}/defer")->assertOk();
+
+        $this->assertDatabaseHas('requirement_versions', [
+            'requirement_id' => $req->id,
+            'version_number'  => 2,
+            'status'          => RequirementStatus::Deferred->value,
+        ]);
+    }
+
+    public function test_defer_on_already_deferred_requirement_does_not_bump_version(): void
+    {
+        $req = $this->makeRequirement(['status' => RequirementStatus::Deferred->value, 'version' => 1]);
+
+        $this->postJson("/api/projects/{$this->project->id}/requirements/{$req->id}/defer")
+            ->assertOk()
+            ->assertJsonPath('data.version', 1);
+
+        $this->assertDatabaseCount('requirement_versions', 0);
     }
 
     public function test_defer_forbidden_for_non_pm(): void
