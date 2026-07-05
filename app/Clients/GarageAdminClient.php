@@ -148,12 +148,15 @@ class GarageAdminClient implements GarageAdminClientContract
 
     public function deleteBucket(string $bucketId): void
     {
+        // Garage's admin API takes the bucket id as a query parameter on DELETE,
+        // not a JSON body — passing it as a body silently 404s (unknown endpoint).
         $response = Http::timeout(10)
-            ->delete("{$this->adminUrl}/v1/bucket", ['id' => $bucketId]);
+            ->withToken($this->adminToken)
+            ->delete("{$this->adminUrl}/v1/bucket?id=" . urlencode($bucketId));
 
         if (! $response->successful()) {
             throw new RuntimeException(
-                "Failed to delete Garage bucket '{$bucketId}': HTTP {$response->status()}"
+                "Failed to delete Garage bucket '{$bucketId}': HTTP {$response->status()} — {$response->body()}"
             );
         }
     }
