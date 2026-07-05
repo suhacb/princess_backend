@@ -8,9 +8,11 @@ use App\Http\Requests\Requirement\RequirementRequest;
 use App\Http\Resources\RequirementResource;
 use App\Models\Project;
 use App\Models\Requirement;
+use App\Models\RequirementVersion;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 /**
  * @tags Requirements
@@ -74,7 +76,13 @@ class RequirementController extends Controller
         $validated['version']    = 1;
         $validated['created_by'] = auth()->user()->person_id;
 
-        $requirement = $project->requirements()->create($validated);
+        $requirement = DB::transaction(function () use ($validated, $project) {
+            $requirement = $project->requirements()->create($validated);
+
+            $this->snapshotVersion($requirement);
+
+            return $requirement;
+        });
 
         return new RequirementResource($requirement->load(['owner']));
     }
@@ -108,10 +116,14 @@ class RequirementController extends Controller
             $this->assertParentValid($project, $validated);
         }
 
-        $requirement->update(array_merge($validated, [
-            'version'    => $requirement->version + 1,
-            'updated_by' => auth()->user()->person_id,
-        ]));
+        DB::transaction(function () use ($requirement, $validated) {
+            $requirement->update(array_merge($validated, [
+                'version'    => $requirement->version + 1,
+                'updated_by' => auth()->user()->person_id,
+            ]));
+
+            $this->snapshotVersion($requirement);
+        });
 
         return new RequirementResource($requirement->fresh()->load(['owner']));
     }
@@ -219,6 +231,25 @@ class RequirementController extends Controller
         ]);
 
         return new RequirementResource($requirement->fresh());
+    }
+
+    /** Snapshots the requirement's current versioned fields as its current version_number. */
+    private function snapshotVersion(Requirement $requirement): void
+    {
+        RequirementVersion::create([
+            'requirement_id' => $requirement->id,
+            'version_number' => $requirement->version,
+            'title'          => $requirement->title,
+            'description'    => $requirement->description,
+            'type'           => $requirement->type->value,
+            'priority'       => $requirement->priority->value,
+            'status'         => $requirement->status->value,
+            'role'           => $requirement->role,
+            'action'         => $requirement->action,
+            'benefit'        => $requirement->benefit,
+            'owner_id'       => $requirement->owner_id,
+            'created_by'     => auth()->user()->person_id,
+        ]);
     }
 
     private function assertParentValid(Project $project, array $validated): void

@@ -28,6 +28,7 @@ use App\Http\Controllers\DocumentVersionController;
 use App\Http\Controllers\DocumentLinkController;
 use App\Http\Controllers\QaDocumentController;
 use App\Http\Controllers\RequirementController;
+use App\Http\Controllers\RequirementVersionController;
 use App\Http\Controllers\WorkPackageController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectMemberController;
@@ -131,6 +132,8 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->name('projects.requirements.reject');
     Route::post('projects/{project}/requirements/{requirement}/defer', [RequirementController::class, 'defer'])
         ->name('projects.requirements.defer');
+    Route::get('projects/{project}/requirements/{requirement}/versions', [RequirementVersionController::class, 'index'])
+        ->name('projects.requirements.versions.index');
 
     Route::apiResource('projects.acceptance-criteria', AcceptanceCriterionController::class)
         ->parameters(['acceptance-criteria' => 'acceptanceCriterion']);

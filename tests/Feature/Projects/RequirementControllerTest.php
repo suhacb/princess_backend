@@ -151,6 +151,22 @@ class RequirementControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_creates_initial_version_snapshot(): void
+    {
+        $response = $this->postJson($this->indexUrl(), $this->classicPayload())->assertCreated();
+
+        $requirement = \App\Models\Requirement::find($response->json('data.id'));
+
+        $this->assertDatabaseHas('requirement_versions', [
+            'requirement_id' => $requirement->id,
+            'version_number'  => 1,
+            'title'           => $requirement->title,
+            'priority'        => $requirement->priority->value,
+            'status'          => RequirementStatus::Draft->value,
+            'created_by'      => $this->person->id,
+        ]);
+    }
+
     public function test_store_creates_epic(): void
     {
         $this->postJson($this->indexUrl(), [
@@ -317,6 +333,32 @@ class RequirementControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated title')
             ->assertJsonPath('data.version', 2);
+    }
+
+    public function test_update_creates_new_version_snapshot(): void
+    {
+        $req = $this->makeRequirement(['version' => 1, 'title' => 'Original title']);
+
+        $this->putJson($this->requirementUrl($req), ['title' => 'Updated title'])->assertOk();
+
+        $this->assertDatabaseHas('requirement_versions', [
+            'requirement_id' => $req->id,
+            'version_number'  => 2,
+            'title'           => 'Updated title',
+        ]);
+    }
+
+    public function test_update_does_not_modify_earlier_version_snapshots(): void
+    {
+        $response = $this->postJson($this->indexUrl(), $this->classicPayload(['title' => 'v1 title']))->assertCreated();
+        $req      = \App\Models\Requirement::find($response->json('data.id'));
+
+        $this->putJson($this->requirementUrl($req), ['title' => 'v2 title'])->assertOk();
+        $this->putJson($this->requirementUrl($req->fresh()), ['title' => 'v3 title'])->assertOk();
+
+        $this->assertDatabaseHas('requirement_versions', ['requirement_id' => $req->id, 'version_number' => 1, 'title' => 'v1 title']);
+        $this->assertDatabaseHas('requirement_versions', ['requirement_id' => $req->id, 'version_number' => 2, 'title' => 'v2 title']);
+        $this->assertDatabaseHas('requirement_versions', ['requirement_id' => $req->id, 'version_number' => 3, 'title' => 'v3 title']);
     }
 
     public function test_update_forbidden_for_read_only_role(): void

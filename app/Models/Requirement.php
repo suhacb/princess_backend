@@ -92,6 +92,11 @@ class Requirement extends Model
         return $this->belongsToMany(QaDocument::class, 'qa_document_requirements');
     }
 
+    public function versions(): HasMany
+    {
+        return $this->hasMany(RequirementVersion::class);
+    }
+
     public function isDeletable(): bool
     {
         if ($this->status !== RequirementStatus::Draft) {
