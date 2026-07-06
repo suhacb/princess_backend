@@ -21,7 +21,9 @@ class AcceptanceCriterionVersionResource extends JsonResource
             'supplier_passed'         => $this->supplier_passed,
             'client_passed'           => $this->client_passed,
             'supplier_decision'       => $this->supplier_decision,
+            'supplier_decision_note'  => $this->supplier_decision_note,
             'client_decision'         => $this->client_decision,
+            'client_decision_note'    => $this->client_decision_note,
             'created_by'              => new PersonResource($this->whenLoaded('createdBy')),
             'created_at'              => $this->created_at,
         ];

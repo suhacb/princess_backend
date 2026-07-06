@@ -27,7 +27,9 @@ class AcceptanceCriterionVersion extends Model
         'supplier_passed',
         'client_passed',
         'supplier_decision',
+        'supplier_decision_note',
         'client_decision',
+        'client_decision_note',
         'created_by',
     ];
 

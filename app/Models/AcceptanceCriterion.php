@@ -165,7 +165,13 @@ class AcceptanceCriterion extends Model
         });
     }
 
-    /** Snapshots the criterion's current versioned fields as its current version_number. */
+    /**
+     * Snapshots the criterion's current versioned fields as its current version_number.
+     * Also captures the decision notes as of this version — they aren't version-bump
+     * triggers themselves (only supplier_decision/client_decision are), but without
+     * this a decision's rationale would be lost the moment the decision changes again,
+     * since the live row's note column gets overwritten.
+     */
     public function snapshotVersion(int $actingPersonId): void
     {
         $fields = collect(self::VERSIONED_FIELDS)->mapWithKeys(function (string $field) {
@@ -177,6 +183,8 @@ class AcceptanceCriterion extends Model
         AcceptanceCriterionVersion::create(array_merge($fields, [
             'acceptance_criterion_id' => $this->id,
             'version_number'          => $this->version,
+            'supplier_decision_note'  => $this->supplier_decision_note,
+            'client_decision_note'    => $this->client_decision_note,
             'created_by'              => $actingPersonId,
         ]));
     }

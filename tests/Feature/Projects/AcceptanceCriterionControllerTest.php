@@ -565,4 +565,109 @@ class AcceptanceCriterionControllerTest extends TestCase
             ])
             ->assertUnprocessable();
     }
+
+    // -------------------------------------------------------------------------
+    // client-decision — mirrors supplier-decision's validation rules
+    // -------------------------------------------------------------------------
+
+    public function test_client_decision_accepted_matching_computed_pass_does_not_require_note(): void
+    {
+        $ac = $this->makeCriterion(['client_passed' => true]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.client_decision', AcceptanceCriterionDecision::Accepted->value);
+    }
+
+    public function test_client_decision_rejecting_despite_computed_pass_requires_note(): void
+    {
+        $ac = $this->makeCriterion(['client_passed' => true]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+                'decision' => AcceptanceCriterionDecision::Rejected->value,
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_client_decision_accepting_despite_computed_fail_requires_note(): void
+    {
+        $ac = $this->makeCriterion(['client_passed' => false]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_client_decision_accepting_despite_computed_fail_succeeds_with_note(): void
+    {
+        $ac = $this->makeCriterion(['client_passed' => false]);
+
+        $this->actingAs($this->makeApprover())
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/client-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+                'note'     => 'Client accepted based on a manual demo despite the automated test failure.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.client_decision', AcceptanceCriterionDecision::Accepted->value);
+    }
+
+    // -------------------------------------------------------------------------
+    // decision note preservation in version history
+    // -------------------------------------------------------------------------
+
+    public function test_decision_note_is_preserved_in_version_history_after_a_later_decision_clears_it(): void
+    {
+        $ac = $this->makeCriterion(['supplier_passed' => true]);
+        $approver = $this->makeApprover();
+
+        $this->actingAs($approver)
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Rejected->value,
+                'note'     => 'Found a UX issue not covered by automated tests.',
+            ])
+            ->assertOk();
+
+        // A later re-decision that matches the computed signal needs no note,
+        // and clears the live column — but the original rationale must still
+        // be readable in the version that recorded the rejection.
+        $this->actingAs($approver)
+            ->postJson("/api/projects/{$this->project->id}/acceptance-criteria/{$ac->id}/supplier-decision", [
+                'decision' => AcceptanceCriterionDecision::Accepted->value,
+            ])
+            ->assertOk();
+
+        $this->assertNull($ac->fresh()->supplier_decision_note);
+
+        $this->assertDatabaseHas('acceptance_criterion_versions', [
+            'acceptance_criterion_id' => $ac->id,
+            'supplier_decision'       => AcceptanceCriterionDecision::Rejected->value,
+            'supplier_decision_note'  => 'Found a UX issue not covered by automated tests.',
+        ]);
+    }
+
+    // -------------------------------------------------------------------------
+    // update — untracked-field-only changes must not bump version
+    // -------------------------------------------------------------------------
+
+    public function test_update_with_only_untracked_field_does_not_bump_version_or_snapshot(): void
+    {
+        $ac = $this->makeCriterion(['version' => 1, 'measurement_method' => 'original method']);
+
+        $this->putJson($this->criterionUrl($ac), ['measurement_method' => 'updated method'])
+            ->assertOk()
+            ->assertJsonPath('data.version', 1);
+
+        $this->assertDatabaseHas('acceptance_criteria', [
+            'id'                  => $ac->id,
+            'measurement_method'  => 'updated method',
+            'version'             => 1,
+        ]);
+        $this->assertDatabaseCount('acceptance_criterion_versions', 0);
+    }
 }
