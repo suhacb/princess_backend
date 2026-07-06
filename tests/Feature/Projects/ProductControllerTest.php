@@ -116,6 +116,56 @@ class ProductControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_non_existent_parent_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['parent_id' => 99999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('parent_id');
+    }
+
+    public function test_store_requires_title(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['title' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_requires_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['type' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_rejects_invalid_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['type' => 'bogus']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_creates_product_with_quality_fields(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload([
+            'quality_criteria'         => ['Meets acceptance tests', 'Peer reviewed'],
+            'quality_responsibilities' => [
+                'producer' => 'Dev Team',
+                'reviewer' => 'QA Lead',
+                'approver' => 'Product Owner',
+            ],
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.quality_criteria', ['Meets acceptance tests', 'Peer reviewed'])
+            ->assertJsonPath('data.quality_responsibilities.producer', 'Dev Team');
+    }
+
+    public function test_store_rejects_quality_criteria_not_array_of_strings(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['quality_criteria' => 'not-an-array']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('quality_criteria');
+    }
+
     public function test_tree_returns_nested_structure(): void
     {
         $root = Product::factory()->create([
@@ -159,6 +209,42 @@ class ProductControllerTest extends TestCase
         $this->putJson($this->productUrl($product), ['title' => 'Updated title'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated title');
+    }
+
+    public function test_update_rejects_null_title(): void
+    {
+        $product = Product::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->productUrl($product), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_invalid_type(): void
+    {
+        $product = Product::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->productUrl($product), ['type' => 'bogus'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_update_rejects_non_existent_parent_id(): void
+    {
+        $product = Product::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->productUrl($product), ['parent_id' => 99999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('parent_id');
     }
 
     public function test_destroy_deletes_draft_product(): void

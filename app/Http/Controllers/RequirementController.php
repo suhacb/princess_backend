@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\RequirementStatus;
 use App\Enums\RequirementType;
-use App\Http\Requests\Requirement\RequirementRequest;
+use App\Http\Requests\Requirement\StoreRequirementRequest;
+use App\Http\Requests\Requirement\UpdateRequirementRequest;
 use App\Http\Resources\RequirementResource;
 use App\Models\Project;
 use App\Models\Requirement;
@@ -66,7 +67,7 @@ class RequirementController extends Controller
      * @response 201 {"data": {"id": 1, "ref": "REQ-001", "type": "classic", "status": "draft"}}
      * @response 422 {"message": "The title field is required."}
      */
-    public function store(RequirementRequest $request, Project $project): RequirementResource
+    public function store(StoreRequirementRequest $request, Project $project): RequirementResource
     {
         $this->authorize('create', [Requirement::class, $project]);
 
@@ -136,7 +137,7 @@ class RequirementController extends Controller
      *
      * @response {"data": {"id": 1, "ref": "REQ-001", "version": 2}}
      */
-    public function update(RequirementRequest $request, Project $project, Requirement $requirement): RequirementResource
+    public function update(UpdateRequirementRequest $request, Project $project, Requirement $requirement): RequirementResource
     {
         $this->authorize('update', [Requirement::class, $project, $requirement]);
 

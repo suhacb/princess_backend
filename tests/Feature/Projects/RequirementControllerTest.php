@@ -298,6 +298,54 @@ class RequirementControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_nonexistent_parent_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->classicPayload(['parent_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('parent_id');
+    }
+
+    public function test_store_returns_422_when_title_exceeds_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->classicPayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_invalid_priority(): void
+    {
+        $this->postJson($this->indexUrl(), $this->classicPayload(['priority' => 'urgent']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_store_returns_422_when_source_exceeds_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->classicPayload(['source' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('source');
+    }
+
+    public function test_store_rejects_nonexistent_owner_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->classicPayload(['owner_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('owner_id');
+    }
+
+    public function test_store_creates_requirement_with_owner_and_source(): void
+    {
+        $owner = Person::factory()->create();
+
+        $this->postJson($this->indexUrl(), $this->classicPayload([
+            'owner_id' => $owner->id,
+            'source'   => 'Stakeholder workshop',
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.owner.id', $owner->id)
+            ->assertJsonPath('data.source', 'Stakeholder workshop');
+    }
+
     // -------------------------------------------------------------------------
     // show
     // -------------------------------------------------------------------------
@@ -382,6 +430,75 @@ class RequirementControllerTest extends TestCase
         $this->assertDatabaseHas('requirement_versions', ['requirement_id' => $req->id, 'version_number' => 1, 'title' => 'v1 title']);
         $this->assertDatabaseHas('requirement_versions', ['requirement_id' => $req->id, 'version_number' => 2, 'title' => 'v2 title']);
         $this->assertDatabaseHas('requirement_versions', ['requirement_id' => $req->id, 'version_number' => 3, 'title' => 'v3 title']);
+    }
+
+    public function test_update_returns_422_when_title_is_empty_string(): void
+    {
+        $req = $this->makeRequirement();
+
+        $this->putJson($this->requirementUrl($req), ['title' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_invalid_priority(): void
+    {
+        $req = $this->makeRequirement();
+
+        $this->putJson($this->requirementUrl($req), ['priority' => 'urgent'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_update_accepts_valid_priority(): void
+    {
+        $req = $this->makeRequirement(['priority' => RequirementPriority::Must->value]);
+
+        $this->putJson($this->requirementUrl($req), ['priority' => RequirementPriority::Could->value])
+            ->assertOk()
+            ->assertJsonPath('data.priority', RequirementPriority::Could->value);
+    }
+
+    public function test_update_allows_clearing_role_action_benefit_on_user_story(): void
+    {
+        $req = $this->makeRequirement([
+            'type'    => RequirementType::UserStory->value,
+            'role'    => 'project manager',
+            'action'  => 'log in',
+            'benefit' => 'access the system',
+        ]);
+
+        $this->putJson($this->requirementUrl($req), ['role' => null, 'action' => null, 'benefit' => null])
+            ->assertOk()
+            ->assertJsonPath('data.role', null);
+    }
+
+    public function test_update_rejects_nonexistent_owner_id(): void
+    {
+        $req = $this->makeRequirement();
+
+        $this->putJson($this->requirementUrl($req), ['owner_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('owner_id');
+    }
+
+    public function test_update_accepts_valid_owner_id(): void
+    {
+        $req   = $this->makeRequirement();
+        $owner = Person::factory()->create();
+
+        $this->putJson($this->requirementUrl($req), ['owner_id' => $owner->id])
+            ->assertOk()
+            ->assertJsonPath('data.owner.id', $owner->id);
+    }
+
+    public function test_update_rejects_nonexistent_parent_id(): void
+    {
+        $req = $this->makeRequirement();
+
+        $this->putJson($this->requirementUrl($req), ['parent_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('parent_id');
     }
 
     public function test_update_forbidden_for_read_only_role(): void

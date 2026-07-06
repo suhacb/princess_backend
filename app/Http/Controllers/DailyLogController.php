@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\DailyLog\DailyLogEntryRequest;
+use App\Http\Requests\DailyLog\StoreDailyLogEntryRequest;
+use App\Http\Requests\DailyLog\UpdateDailyLogEntryRequest;
 use App\Http\Resources\DailyLogEntryResource;
 use App\Models\DailyLogEntry;
 use App\Models\Project;
@@ -33,7 +34,7 @@ class DailyLogController extends Controller
      *
      * @response 201 {"data": {"id": 1, "entry_type": "note", "body": "..."}}
      */
-    public function store(DailyLogEntryRequest $request, Project $project): DailyLogEntryResource
+    public function store(StoreDailyLogEntryRequest $request, Project $project): DailyLogEntryResource
     {
         $this->authorize('create', [DailyLogEntry::class, $project]);
 
@@ -62,7 +63,7 @@ class DailyLogController extends Controller
      *
      * @response {"data": {"id": 1, "body": "Updated"}}
      */
-    public function update(DailyLogEntryRequest $request, Project $project, DailyLogEntry $dailyLogEntry): DailyLogEntryResource
+    public function update(UpdateDailyLogEntryRequest $request, Project $project, DailyLogEntry $dailyLogEntry): DailyLogEntryResource
     {
         $this->authorize('update', [DailyLogEntry::class, $project, $dailyLogEntry]);
 

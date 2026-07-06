@@ -9,6 +9,7 @@ use App\Enums\ProjectRole;
 use App\Models\Issue;
 use App\Models\Person;
 use App\Models\Project;
+use App\Models\Stage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -113,6 +114,101 @@ class IssueLogControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_store_requires_issue_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['issue_type' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_type');
+    }
+
+    public function test_store_rejects_invalid_issue_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['issue_type' => 'not_a_type']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_type');
+    }
+
+    public function test_store_requires_title(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['title' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_title_exceeding_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_requires_priority(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['priority' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_store_rejects_invalid_priority(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['priority' => 'urgent']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_store_accepts_description(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['description' => 'Detailed context about the issue.']))
+            ->assertCreated()
+            ->assertJsonPath('data.description', 'Detailed context about the issue.');
+    }
+
+    public function test_store_rejects_non_string_description(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['description' => ['not', 'a', 'string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_store_accepts_valid_stage_id(): void
+    {
+        $stage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->postJson($this->indexUrl(), $this->validPayload(['stage_id' => $stage->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.stage_id', $stage->id);
+    }
+
+    public function test_store_rejects_nonexistent_stage_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['stage_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_store_accepts_valid_assigned_to(): void
+    {
+        $assignee = Person::factory()->create();
+
+        $this->postJson($this->indexUrl(), $this->validPayload(['assigned_to' => $assignee->id]))
+            ->assertCreated();
+
+        $this->assertDatabaseHas('issues', [
+            'title'       => 'Delivery milestone missed',
+            'assigned_to' => $assignee->id,
+        ]);
+    }
+
+    public function test_store_rejects_nonexistent_assigned_to(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['assigned_to' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assigned_to');
+    }
+
     public function test_show_returns_issue(): void
     {
         $issue = $this->makeIssue();
@@ -129,6 +225,73 @@ class IssueLogControllerTest extends TestCase
         $this->putJson($this->issueUrl($issue), ['title' => 'Updated title'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated title');
+    }
+
+    public function test_update_rejects_invalid_issue_type(): void
+    {
+        $issue = $this->makeIssue();
+
+        $this->putJson($this->issueUrl($issue), ['issue_type' => 'not_a_type'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_type');
+    }
+
+    public function test_update_rejects_blank_title(): void
+    {
+        $issue = $this->makeIssue();
+
+        $this->putJson($this->issueUrl($issue), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_invalid_priority(): void
+    {
+        $issue = $this->makeIssue();
+
+        $this->putJson($this->issueUrl($issue), ['priority' => 'urgent'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_update_rejects_nonexistent_stage_id(): void
+    {
+        $issue = $this->makeIssue();
+
+        $this->putJson($this->issueUrl($issue), ['stage_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_update_rejects_nonexistent_assigned_to(): void
+    {
+        $issue = $this->makeIssue();
+
+        $this->putJson($this->issueUrl($issue), ['assigned_to' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assigned_to');
+    }
+
+    public function test_update_accepts_valid_stage_id_and_assigned_to(): void
+    {
+        $issue = $this->makeIssue();
+        $stage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+        $assignee = Person::factory()->create();
+
+        $this->putJson($this->issueUrl($issue), [
+            'stage_id'    => $stage->id,
+            'assigned_to' => $assignee->id,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $stage->id);
+
+        $this->assertDatabaseHas('issues', [
+            'id'          => $issue->id,
+            'assigned_to' => $assignee->id,
+        ]);
     }
 
     public function test_destroy_deletes_issue(): void

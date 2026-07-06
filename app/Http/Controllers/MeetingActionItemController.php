@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\MeetingActionItemStatus;
-use App\Http\Requests\Meeting\MeetingActionItemRequest;
+use App\Http\Requests\Meeting\StoreMeetingActionItemRequest;
+use App\Http\Requests\Meeting\UpdateMeetingActionItemRequest;
 use App\Http\Resources\MeetingActionItemResource;
 use App\Models\Meeting;
 use App\Models\MeetingActionItem;
@@ -20,7 +21,7 @@ class MeetingActionItemController extends Controller
      *
      * @response 201 {"data": {"id": 1, "description": "Follow up with vendor", "status": "open"}}
      */
-    public function store(MeetingActionItemRequest $request, Project $project, Meeting $meeting): MeetingActionItemResource
+    public function store(StoreMeetingActionItemRequest $request, Project $project, Meeting $meeting): MeetingActionItemResource
     {
         $this->authorize('create', [MeetingActionItem::class, $project, $meeting]);
 
@@ -41,7 +42,7 @@ class MeetingActionItemController extends Controller
      *
      * @response {"data": {"id": 1, "status": "closed"}}
      */
-    public function update(MeetingActionItemRequest $request, Project $project, Meeting $meeting, MeetingActionItem $actionItem): MeetingActionItemResource
+    public function update(UpdateMeetingActionItemRequest $request, Project $project, Meeting $meeting, MeetingActionItem $actionItem): MeetingActionItemResource
     {
         $this->authorize('update', [MeetingActionItem::class, $project, $meeting, $actionItem]);
 

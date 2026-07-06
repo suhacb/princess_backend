@@ -223,6 +223,13 @@ class WorkPackageControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_non_existent_plan_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['plan_id' => 99999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('plan_id');
+    }
+
     public function test_store_rejects_team_manager_not_in_project(): void
     {
         $outsider = Person::factory()->create();
@@ -309,6 +316,60 @@ class WorkPackageControllerTest extends TestCase
             'planned_start' => '2026-09-01',
             'planned_end'   => '2026-08-01',
         ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_end');
+    }
+
+    public function test_update_rejects_null_title(): void
+    {
+        $wp = $this->makeWorkPackage();
+
+        $this->putJson($this->workPackageUrl($wp), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_null_team_manager_id(): void
+    {
+        $wp = $this->makeWorkPackage();
+
+        $this->putJson($this->workPackageUrl($wp), ['team_manager_id' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_manager_id');
+    }
+
+    public function test_update_rejects_non_existent_team_manager_id(): void
+    {
+        $wp = $this->makeWorkPackage();
+
+        $this->putJson($this->workPackageUrl($wp), ['team_manager_id' => 99999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_manager_id');
+    }
+
+    public function test_update_rejects_non_existent_plan_id(): void
+    {
+        $wp = $this->makeWorkPackage();
+
+        $this->putJson($this->workPackageUrl($wp), ['plan_id' => 99999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('plan_id');
+    }
+
+    public function test_update_rejects_null_planned_start(): void
+    {
+        $wp = $this->makeWorkPackage();
+
+        $this->putJson($this->workPackageUrl($wp), ['planned_start' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_start');
+    }
+
+    public function test_update_rejects_null_planned_end(): void
+    {
+        $wp = $this->makeWorkPackage();
+
+        $this->putJson($this->workPackageUrl($wp), ['planned_end' => null])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('planned_end');
     }

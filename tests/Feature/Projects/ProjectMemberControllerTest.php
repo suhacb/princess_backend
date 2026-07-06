@@ -107,12 +107,72 @@ class ProjectMemberControllerTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors(['role']);
     }
 
+    public function test_store_returns_422_for_missing_role(): void
+    {
+        $newPerson = Person::factory()->create();
+
+        $this->postJson($this->url(), [
+            'person_id' => $newPerson->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['role']);
+    }
+
+    public function test_store_returns_422_for_missing_person_id(): void
+    {
+        $this->postJson($this->url(), [
+            'role' => ProjectRole::TeamMember->value,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['person_id']);
+    }
+
+    public function test_store_returns_422_for_nonexistent_person_id(): void
+    {
+        $this->postJson($this->url(), [
+            'person_id' => 999999,
+            'role'      => ProjectRole::TeamMember->value,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['person_id']);
+    }
+
+    public function test_store_returns_422_for_invalid_side(): void
+    {
+        $newPerson = Person::factory()->create();
+
+        $this->postJson($this->url(), [
+            'person_id' => $newPerson->id,
+            'role'      => ProjectRole::TeamMember->value,
+            'side'      => 'referee',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['side']);
+    }
+
     public function test_store_returns_422_when_person_already_a_member(): void
     {
         $this->postJson($this->url(), [
             'person_id' => $this->person->id,
             'role'      => ProjectRole::Observer->value,
         ])->assertUnprocessable()->assertJsonValidationErrors(['person_id']);
+    }
+
+    public function test_store_allows_same_person_in_a_different_project(): void
+    {
+        $otherManagerPerson = Person::factory()->create();
+        $otherManagerUser   = User::factory()->create(['person_id' => $otherManagerPerson->id]);
+        $otherProject       = Project::factory()->create(['created_by' => $otherManagerPerson->id]);
+        $otherProject->members()->create([
+            'person_id' => $otherManagerPerson->id,
+            'role'      => ProjectRole::ProjectManager->value,
+        ]);
+
+        $this->actingAs($otherManagerUser)
+            ->postJson("/api/projects/{$otherProject->id}/members", [
+                'person_id' => $this->person->id,
+                'role'      => ProjectRole::TeamMember->value,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.person.id', $this->person->id);
+
+        $this->assertDatabaseHas('project_members', [
+            'project_id' => $otherProject->id,
+            'person_id'  => $this->person->id,
+            'role'       => ProjectRole::TeamMember->value,
+        ]);
     }
 
     public function test_store_forbidden_for_observer(): void
@@ -158,6 +218,54 @@ class ProjectMemberControllerTest extends TestCase
         $this->putJson($this->url($otherMember), ['side' => PersonSide::Supplier->value])
             ->assertOk()
             ->assertJsonPath('data.side', PersonSide::Supplier->value);
+    }
+
+    public function test_update_returns_422_for_invalid_role(): void
+    {
+        $other       = Person::factory()->create();
+        $otherMember = $this->project->members()->create([
+            'person_id' => $other->id,
+            'role'      => ProjectRole::TeamMember->value,
+        ]);
+
+        $this->putJson($this->url($otherMember), ['role' => 'dictator'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['role']);
+    }
+
+    public function test_update_returns_422_for_invalid_side(): void
+    {
+        $other       = Person::factory()->create();
+        $otherMember = $this->project->members()->create([
+            'person_id' => $other->id,
+            'role'      => ProjectRole::TeamMember->value,
+        ]);
+
+        $this->putJson($this->url($otherMember), ['side' => 'referee'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['side']);
+    }
+
+    public function test_update_ignores_person_id(): void
+    {
+        $other       = Person::factory()->create();
+        $otherMember = $this->project->members()->create([
+            'person_id' => $other->id,
+            'role'      => ProjectRole::TeamMember->value,
+        ]);
+        $anotherPerson = Person::factory()->create();
+
+        $this->putJson($this->url($otherMember), [
+            'person_id' => $anotherPerson->id,
+            'role'      => ProjectRole::TeamManager->value,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.person.id', $other->id);
+
+        $this->assertDatabaseHas('project_members', [
+            'id'        => $otherMember->id,
+            'person_id' => $other->id,
+        ]);
     }
 
     public function test_update_returns_422_when_removing_last_project_manager(): void

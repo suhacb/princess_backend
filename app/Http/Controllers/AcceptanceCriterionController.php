@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Enums\AcceptanceCriterionDecision;
 use App\Enums\AcceptanceCriterionStatus;
 use App\Enums\RequirementType;
-use App\Http\Requests\AcceptanceCriterion\AcceptanceCriterionRequest;
+use App\Http\Requests\AcceptanceCriterion\StoreAcceptanceCriterionRequest;
+use App\Http\Requests\AcceptanceCriterion\UpdateAcceptanceCriterionRequest;
 use App\Http\Resources\AcceptanceCriterionResource;
 use App\Models\AcceptanceCriterion;
 use App\Models\Project;
@@ -57,7 +58,7 @@ class AcceptanceCriterionController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "AC-001", "status": "draft"}}
      */
-    public function store(AcceptanceCriterionRequest $request, Project $project): AcceptanceCriterionResource
+    public function store(StoreAcceptanceCriterionRequest $request, Project $project): AcceptanceCriterionResource
     {
         $this->authorize('create', [AcceptanceCriterion::class, $project]);
 
@@ -105,7 +106,7 @@ class AcceptanceCriterionController extends Controller
      *
      * @response {"data": {"id": 1, "description": "Updated"}}
      */
-    public function update(AcceptanceCriterionRequest $request, Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
+    public function update(UpdateAcceptanceCriterionRequest $request, Project $project, AcceptanceCriterion $acceptanceCriterion): AcceptanceCriterionResource
     {
         $this->authorize('update', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
 

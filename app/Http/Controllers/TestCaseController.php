@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TestCasePriority;
-use App\Http\Requests\TestCase\TestCaseRequest;
+use App\Http\Requests\TestCase\StoreTestCaseRequest;
+use App\Http\Requests\TestCase\UpdateTestCaseRequest;
 use App\Http\Resources\TestCaseResource;
 use App\Models\Project;
 use App\Models\TestCase;
@@ -36,7 +37,7 @@ class TestCaseController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "TC-001", "title": "...", "priority": "medium", "type": "positive"}}
      */
-    public function store(TestCaseRequest $request, Project $project, TestScenario $testScenario): TestCaseResource
+    public function store(StoreTestCaseRequest $request, Project $project, TestScenario $testScenario): TestCaseResource
     {
         $this->authorize('create', [TestCase::class, $project, $testScenario]);
 
@@ -70,7 +71,7 @@ class TestCaseController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(TestCaseRequest $request, Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
+    public function update(UpdateTestCaseRequest $request, Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
     {
         $this->authorize('update', [TestCase::class, $project, $testScenario, $testCase]);
 

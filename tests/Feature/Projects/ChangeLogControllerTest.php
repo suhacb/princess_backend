@@ -6,6 +6,7 @@ use App\Enums\ChangeRequestType;
 use App\Enums\ChangeStatus;
 use App\Enums\ProjectRole;
 use App\Models\Change;
+use App\Models\Issue;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\User;
@@ -99,6 +100,102 @@ class ChangeLogControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_requires_request_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['request_type' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('request_type');
+    }
+
+    public function test_store_rejects_invalid_request_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['request_type' => 'not-a-type']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('request_type');
+    }
+
+    public function test_store_requires_title(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['title' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_title_over_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_non_string_description(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['description' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_store_rejects_non_string_impact_assessment(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['impact_assessment' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('impact_assessment');
+    }
+
+    public function test_store_rejects_priority_over_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['priority' => str_repeat('a', 51)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_store_accepts_valid_priority(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['priority' => 'High']))
+            ->assertCreated()
+            ->assertJsonPath('data.priority', 'High');
+    }
+
+    public function test_store_rejects_non_integer_issue_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['issue_id' => 'not-an-id']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_id');
+    }
+
+    public function test_store_rejects_nonexistent_issue_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['issue_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_id');
+    }
+
+    public function test_store_accepts_existing_issue_id(): void
+    {
+        $issue = Issue::factory()->create([
+            'project_id' => $this->project->id,
+            'raised_by'  => $this->person->id,
+        ]);
+
+        $this->postJson($this->indexUrl(), $this->validPayload(['issue_id' => $issue->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.issue_id', $issue->id);
+    }
+
+    public function test_store_rejects_invalid_implementation_due(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['implementation_due' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('implementation_due');
+    }
+
+    public function test_store_accepts_valid_implementation_due(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['implementation_due' => '2026-08-01']))
+            ->assertCreated()
+            ->assertJsonPath('data.implementation_due', '2026-08-01');
+    }
+
     public function test_store_forbidden_for_observer(): void
     {
         $observerPerson = Person::factory()->create();
@@ -129,6 +226,172 @@ class ChangeLogControllerTest extends TestCase
         $this->putJson($this->changeUrl($change), ['title' => 'Updated title'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated title');
+    }
+
+    public function test_update_rejects_empty_request_type(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['request_type' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('request_type');
+    }
+
+    public function test_update_rejects_invalid_request_type(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['request_type' => 'not-a-type'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('request_type');
+    }
+
+    public function test_update_accepts_valid_request_type(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['request_type' => ChangeRequestType::OffSpec->value])
+            ->assertOk()
+            ->assertJsonPath('data.request_type', ChangeRequestType::OffSpec->value);
+    }
+
+    public function test_update_rejects_empty_title(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_title_over_max_length(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['title' => str_repeat('a', 256)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_non_string_description(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['description' => ['not-a-string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_update_rejects_non_string_impact_assessment(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['impact_assessment' => ['not-a-string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('impact_assessment');
+    }
+
+    public function test_update_rejects_priority_over_max_length(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['priority' => str_repeat('a', 51)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
+    }
+
+    public function test_update_accepts_valid_priority(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['priority' => 'Low'])
+            ->assertOk()
+            ->assertJsonPath('data.priority', 'Low');
+    }
+
+    public function test_update_rejects_empty_status(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['status' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_update_rejects_invalid_status(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['status' => 'not-a-status'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_update_rejects_non_integer_issue_id(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['issue_id' => 'not-an-id'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_id');
+    }
+
+    public function test_update_rejects_nonexistent_issue_id(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['issue_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issue_id');
+    }
+
+    public function test_update_accepts_existing_issue_id(): void
+    {
+        $change = $this->makeChange();
+        $issue  = Issue::factory()->create([
+            'project_id' => $this->project->id,
+            'raised_by'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->changeUrl($change), ['issue_id' => $issue->id])
+            ->assertOk()
+            ->assertJsonPath('data.issue_id', $issue->id);
+    }
+
+    public function test_update_rejects_invalid_implementation_due(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['implementation_due' => 'not-a-date'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('implementation_due');
+    }
+
+    public function test_update_accepts_valid_implementation_due(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['implementation_due' => '2026-08-01'])
+            ->assertOk()
+            ->assertJsonPath('data.implementation_due', '2026-08-01');
+    }
+
+    public function test_update_rejects_invalid_implemented_at(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['implemented_at' => 'not-a-date'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('implemented_at');
+    }
+
+    public function test_update_accepts_valid_implemented_at(): void
+    {
+        $change = $this->makeChange();
+
+        $this->putJson($this->changeUrl($change), ['implemented_at' => '2026-07-01'])
+            ->assertOk()
+            ->assertJsonPath('data.implemented_at', '2026-07-01');
     }
 
     public function test_destroy_deletes_change(): void

@@ -194,6 +194,50 @@ class TestSessionPlanControllerTest extends TestCase
             ->assertJsonValidationErrors('team_type');
     }
 
+    public function test_store_fails_when_title_too_long(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_fails_when_planned_date_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['planned_date' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_date');
+    }
+
+    public function test_store_fails_when_team_type_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['team_type' => 'vendor']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_type');
+    }
+
+    public function test_store_fails_when_assignee_id_does_not_exist(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['assignee_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assignee_id');
+    }
+
+    public function test_store_creates_plan_with_valid_assignee(): void
+    {
+        $assignee = Person::factory()->create();
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['assignee_id' => $assignee->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.assignee.id', $assignee->id);
+    }
+
+    public function test_store_fails_when_scenario_id_does_not_exist(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['scenario_ids' => [999999]]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('scenario_ids.0');
+    }
+
     public function test_store_forbidden_for_observer(): void
     {
         $p = Person::factory()->create();
@@ -230,6 +274,42 @@ class TestSessionPlanControllerTest extends TestCase
         $this->putJson($this->planUrl($plan), ['title' => 'Updated'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated');
+    }
+
+    public function test_update_fails_when_title_empty(): void
+    {
+        $plan = $this->makePlan(['title' => 'Original']);
+
+        $this->putJson($this->planUrl($plan), ['title' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_fails_when_planned_date_invalid(): void
+    {
+        $plan = $this->makePlan();
+
+        $this->putJson($this->planUrl($plan), ['planned_date' => 'not-a-date'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_date');
+    }
+
+    public function test_update_edits_planned_date(): void
+    {
+        $plan = $this->makePlan();
+
+        $this->putJson($this->planUrl($plan), ['planned_date' => '2026-08-15'])
+            ->assertOk()
+            ->assertJsonPath('data.planned_date', '2026-08-15T00:00:00.000000Z');
+    }
+
+    public function test_update_fails_when_assignee_id_does_not_exist(): void
+    {
+        $plan = $this->makePlan();
+
+        $this->putJson($this->planUrl($plan), ['assignee_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assignee_id');
     }
 
     public function test_update_syncs_scenarios(): void

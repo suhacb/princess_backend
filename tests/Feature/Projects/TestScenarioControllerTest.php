@@ -248,6 +248,55 @@ class TestScenarioControllerTest extends BaseTestCase
             ->assertJsonValidationErrors('type');
     }
 
+    public function test_store_rejects_title_over_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_non_string_title(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => ['not', 'a', 'string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_non_string_description(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['description' => ['not', 'a', 'string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_store_rejects_non_string_preconditions(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['preconditions' => ['not', 'a', 'string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('preconditions');
+    }
+
+    public function test_store_rejects_non_array_acceptance_criterion_ids(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['acceptance_criterion_ids' => 'not-an-array']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_criterion_ids');
+    }
+
+    public function test_store_rejects_non_integer_acceptance_criterion_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['acceptance_criterion_ids' => ['not-an-integer']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_criterion_ids.0');
+    }
+
+    public function test_store_rejects_non_existent_acceptance_criterion_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['acceptance_criterion_ids' => [999999]]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_criterion_ids.0');
+    }
+
     // -------------------------------------------------------------------------
     // show
     // -------------------------------------------------------------------------
@@ -302,6 +351,73 @@ class TestScenarioControllerTest extends BaseTestCase
 
         $this->assertCount(1, $scenario->fresh()->acceptanceCriteria);
         $this->assertEquals($ac2->id, $scenario->fresh()->acceptanceCriteria->first()->id);
+    }
+
+    // -------------------------------------------------------------------------
+    // update – validation
+    // -------------------------------------------------------------------------
+
+    public function test_update_rejects_null_title_when_present(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_title_over_max_length(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['title' => str_repeat('a', 256)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_non_string_description(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['description' => ['not', 'a', 'string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_update_rejects_non_string_preconditions(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['preconditions' => ['not', 'a', 'string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('preconditions');
+    }
+
+    public function test_update_rejects_non_array_acceptance_criterion_ids(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['acceptance_criterion_ids' => 'not-an-array'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_criterion_ids');
+    }
+
+    public function test_update_rejects_non_integer_acceptance_criterion_id(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['acceptance_criterion_ids' => ['not-an-integer']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_criterion_ids.0');
+    }
+
+    public function test_update_rejects_non_existent_acceptance_criterion_id(): void
+    {
+        $scenario = $this->makeScenario();
+
+        $this->putJson($this->scenarioUrl($scenario), ['acceptance_criterion_ids' => [999999]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_criterion_ids.0');
     }
 
     // -------------------------------------------------------------------------
@@ -437,6 +553,17 @@ class TestScenarioControllerTest extends BaseTestCase
             ->assertOk()
             ->assertJsonPath('data.is_testable', false)
             ->assertJsonPath('data.testable_notes', null);
+    }
+
+    public function test_mark_testable_rejects_non_string_notes(): void
+    {
+        $scenario = $this->makeScenario(['is_testable' => false]);
+
+        $this->postJson($this->scenarioUrl($scenario) . '/mark-testable', [
+            'testable_notes' => ['not', 'a', 'string'],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('testable_notes');
     }
 
     public function test_mark_testable_forbidden_for_observer(): void

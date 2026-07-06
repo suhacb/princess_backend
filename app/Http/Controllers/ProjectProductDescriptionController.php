@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\ProductDescription\ProjectProductDescriptionRequest;
+use App\Http\Requests\ProductDescription\StoreProjectProductDescriptionRequest;
+use App\Http\Requests\ProductDescription\UpdateProjectProductDescriptionRequest;
 use App\Http\Resources\ProjectProductDescriptionResource;
 use App\Models\Project;
 use App\Models\ProjectProductDescription;
@@ -32,7 +33,7 @@ class ProjectProductDescriptionController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "Banking CORE System"}}
      */
-    public function store(ProjectProductDescriptionRequest $request, Project $project): ProjectProductDescriptionResource
+    public function store(StoreProjectProductDescriptionRequest $request, Project $project): ProjectProductDescriptionResource
     {
         $this->authorize('create', [ProjectProductDescription::class, $project]);
 
@@ -49,7 +50,7 @@ class ProjectProductDescriptionController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated title"}}
      */
-    public function update(ProjectProductDescriptionRequest $request, Project $project): ProjectProductDescriptionResource
+    public function update(UpdateProjectProductDescriptionRequest $request, Project $project): ProjectProductDescriptionResource
     {
         $ppd = $project->productDescription()->firstOrFail();
 

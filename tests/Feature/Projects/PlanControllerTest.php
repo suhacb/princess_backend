@@ -305,6 +305,34 @@ class PlanControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_non_existent_replaces_plan_id(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'             => PlanType::Exception->value,
+            'name'             => 'Exception Plan',
+            'planned_start'    => '2026-03-01',
+            'planned_end'      => '2026-07-31',
+            'stage_id'         => $this->stage->id,
+            'replaces_plan_id' => 99999,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('replaces_plan_id');
+    }
+
+    public function test_store_creates_plan_with_optional_tolerance_fields(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validTeamPlanPayload([
+            'description'              => 'Team plan covering delivery workstream.',
+            'tolerance_time'           => '+/- 2 weeks',
+            'tolerance_cost'           => '+/- 5%',
+            'assumptions'              => 'Resources remain available.',
+            'external_dependencies'    => 'Vendor API availability.',
+            'monitoring_and_reporting' => 'Weekly highlight reports.',
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.tolerance_time', '+/- 2 weeks');
+    }
+
     // -------------------------------------------------------------------------
     // show
     // -------------------------------------------------------------------------
@@ -367,6 +395,75 @@ class PlanControllerTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('planned_end');
+    }
+
+    public function test_update_rejects_null_name(): void
+    {
+        $plan = Plan::factory()->create([
+            'project_id' => $this->project->id,
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->planUrl($plan), ['name' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('name');
+    }
+
+    public function test_update_rejects_null_planned_start(): void
+    {
+        $plan = Plan::factory()->create([
+            'project_id' => $this->project->id,
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->planUrl($plan), ['planned_start' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_start');
+    }
+
+    public function test_update_rejects_null_planned_end(): void
+    {
+        $plan = Plan::factory()->create([
+            'project_id' => $this->project->id,
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->planUrl($plan), ['planned_end' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_end');
+    }
+
+    public function test_update_edits_stage_id(): void
+    {
+        $plan     = Plan::factory()->create([
+            'project_id' => $this->project->id,
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+        $newStage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->planUrl($plan), ['stage_id' => $newStage->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $newStage->id);
+    }
+
+    public function test_update_rejects_non_existent_stage_id(): void
+    {
+        $plan = Plan::factory()->create([
+            'project_id' => $this->project->id,
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->planUrl($plan), ['stage_id' => 99999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
     }
 
     public function test_update_forbidden_for_read_only_role(): void

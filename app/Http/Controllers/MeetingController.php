@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\Meeting\MeetingRequest;
+use App\Http\Requests\Meeting\StoreMeetingRequest;
+use App\Http\Requests\Meeting\UpdateMeetingRequest;
 use App\Http\Resources\MeetingResource;
 use App\Models\Meeting;
 use App\Models\Project;
@@ -41,7 +42,7 @@ class MeetingController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "Kick-off"}}
      */
-    public function store(MeetingRequest $request, Project $project): MeetingResource
+    public function store(StoreMeetingRequest $request, Project $project): MeetingResource
     {
         $this->authorize('create', [Meeting::class, $project]);
 
@@ -83,7 +84,7 @@ class MeetingController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(MeetingRequest $request, Project $project, Meeting $meeting): MeetingResource
+    public function update(UpdateMeetingRequest $request, Project $project, Meeting $meeting): MeetingResource
     {
         $this->authorize('update', [Meeting::class, $project, $meeting]);
 

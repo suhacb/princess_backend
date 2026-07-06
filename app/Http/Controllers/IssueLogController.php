@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\IssueStatus;
-use App\Http\Requests\IssueLog\IssueLogRequest;
+use App\Http\Requests\IssueLog\StoreIssueLogRequest;
+use App\Http\Requests\IssueLog\UpdateIssueLogRequest;
 use App\Http\Resources\IssueResource;
 use App\Models\Issue;
 use App\Models\Project;
@@ -35,7 +36,7 @@ class IssueLogController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "...", "status": "open"}}
      */
-    public function store(IssueLogRequest $request, Project $project): IssueResource
+    public function store(StoreIssueLogRequest $request, Project $project): IssueResource
     {
         $this->authorize('create', [Issue::class, $project]);
 
@@ -68,7 +69,7 @@ class IssueLogController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(IssueLogRequest $request, Project $project, Issue $issue): IssueResource
+    public function update(UpdateIssueLogRequest $request, Project $project, Issue $issue): IssueResource
     {
         $this->authorize('update', [Issue::class, $project, $issue]);
 

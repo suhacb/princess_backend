@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Enums\TeamType;
 use App\Enums\TestResultStatus;
 use App\Enums\TestSessionStatus;
-use App\Http\Requests\TestSession\TestSessionRequest;
+use App\Http\Requests\TestSession\StoreTestSessionRequest;
+use App\Http\Requests\TestSession\UpdateTestSessionRequest;
+use App\Http\Requests\TestSession\UpdateResultTestSessionRequest;
 use App\Http\Resources\TestSessionResource;
 use App\Http\Resources\TestSessionResultResource;
 use App\Models\Project;
@@ -60,7 +62,7 @@ class TestSessionController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "TS-001", "status": "planned", "results": []}}
      */
-    public function store(TestSessionRequest $request, Project $project): TestSessionResource
+    public function store(StoreTestSessionRequest $request, Project $project): TestSessionResource
     {
         $this->authorize('create', [TestSession::class, $project]);
 
@@ -110,7 +112,7 @@ class TestSessionController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(TestSessionRequest $request, Project $project, TestSession $testSession): TestSessionResource
+    public function update(UpdateTestSessionRequest $request, Project $project, TestSession $testSession): TestSessionResource
     {
         $this->authorize('update', [TestSession::class, $project, $testSession]);
 
@@ -224,7 +226,7 @@ class TestSessionController extends Controller
      * @response {"data": {"result": "pass", "executed_at": "2026-07-01T10:00:00Z"}}
      * @response 422 {"message": "This scenario is not part of the session."}
      */
-    public function updateResult(TestSessionRequest $request, Project $project, TestSession $testSession, TestScenario $testScenario): TestSessionResultResource
+    public function updateResult(UpdateResultTestSessionRequest $request, Project $project, TestSession $testSession, TestScenario $testScenario): TestSessionResultResource
     {
         $this->authorize('updateResult', [TestSession::class, $project, $testSession]);
 

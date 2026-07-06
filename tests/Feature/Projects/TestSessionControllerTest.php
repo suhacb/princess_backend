@@ -181,6 +181,95 @@ class TestSessionControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_fails_when_title_missing(): void
+    {
+        $payload = $this->storePayload();
+        unset($payload['title']);
+
+        $this->postJson($this->indexUrl(), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_fails_when_title_too_long(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_fails_when_session_date_missing(): void
+    {
+        $payload = $this->storePayload();
+        unset($payload['session_date']);
+
+        $this->postJson($this->indexUrl(), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('session_date');
+    }
+
+    public function test_store_fails_when_session_date_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['session_date' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('session_date');
+    }
+
+    public function test_store_fails_when_tester_id_missing(): void
+    {
+        $payload = $this->storePayload();
+        unset($payload['tester_id']);
+
+        $this->postJson($this->indexUrl(), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('tester_id');
+    }
+
+    public function test_store_fails_when_tester_id_does_not_exist(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['tester_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('tester_id');
+    }
+
+    public function test_store_fails_when_team_type_missing(): void
+    {
+        $payload = $this->storePayload();
+        unset($payload['team_type']);
+
+        $this->postJson($this->indexUrl(), $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_type');
+    }
+
+    public function test_store_fails_when_team_type_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['team_type' => 'vendor']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('team_type');
+    }
+
+    public function test_store_fails_when_environment_too_long(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['environment' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('environment');
+    }
+
+    public function test_store_creates_session_with_valid_environment(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['environment' => 'staging']))
+            ->assertCreated()
+            ->assertJsonPath('data.environment', 'staging');
+    }
+
+    public function test_store_fails_when_test_session_plan_id_does_not_exist(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['test_session_plan_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('test_session_plan_id');
+    }
+
     public function test_store_rejects_team_type_mismatch_with_plan(): void
     {
         $plan = TestSessionPlan::factory()->create([
@@ -235,6 +324,53 @@ class TestSessionControllerTest extends TestCase
         $this->putJson($this->sessionUrl($session), ['title' => 'Updated'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated');
+    }
+
+    public function test_update_fails_when_title_empty(): void
+    {
+        $session = $this->makeSession(['title' => 'Original']);
+
+        $this->putJson($this->sessionUrl($session), ['title' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_fails_when_session_date_invalid(): void
+    {
+        $session = $this->makeSession();
+
+        $this->putJson($this->sessionUrl($session), ['session_date' => 'not-a-date'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('session_date');
+    }
+
+    public function test_update_edits_session_date(): void
+    {
+        $session = $this->makeSession();
+
+        $this->putJson($this->sessionUrl($session), ['session_date' => '2026-08-01'])
+            ->assertOk()
+            ->assertJsonPath('data.session_date', '2026-08-01T00:00:00.000000Z');
+    }
+
+    public function test_update_fails_when_tester_id_does_not_exist(): void
+    {
+        $session = $this->makeSession();
+
+        $this->putJson($this->sessionUrl($session), ['tester_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('tester_id');
+    }
+
+    public function test_update_edits_tester(): void
+    {
+        $session   = $this->makeSession();
+        $newTester = Person::factory()->create();
+        $this->project->members()->create(['person_id' => $newTester->id, 'role' => ProjectRole::TeamMember->value]);
+
+        $this->putJson($this->sessionUrl($session), ['tester_id' => $newTester->id])
+            ->assertOk()
+            ->assertJsonPath('data.tester.id', $newTester->id);
     }
 
     public function test_destroy_deletes_planned_session(): void
@@ -359,6 +495,42 @@ class TestSessionControllerTest extends TestCase
             "/api/projects/{$this->project->id}/test-sessions/{$session->id}/results/{$scenario->id}",
             ['result' => 'nonsense']
         )->assertUnprocessable();
+    }
+
+    public function test_update_result_fails_when_defect_ref_too_long(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson(
+            "/api/projects/{$this->project->id}/test-sessions/{$session->id}/results/{$scenario->id}",
+            ['result' => 'fail', 'defect_ref' => str_repeat('a', 256)]
+        )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('defect_ref');
+    }
+
+    public function test_update_result_records_defect_ref(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson(
+            "/api/projects/{$this->project->id}/test-sessions/{$session->id}/results/{$scenario->id}",
+            ['result' => 'fail', 'defect_ref' => 'BUG-42']
+        )
+            ->assertOk()
+            ->assertJsonPath('data.defect_ref', 'BUG-42');
     }
 
     public function test_update_result_rejects_scenario_not_in_session(): void

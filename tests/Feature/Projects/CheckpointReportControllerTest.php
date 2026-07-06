@@ -199,6 +199,82 @@ class CheckpointReportControllerTest extends TestCase
             ->assertJsonValidationErrors('planned_next_period');
     }
 
+    public function test_store_fails_when_title_too_long(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_fails_when_period_from_not_a_date(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['period_from' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_from');
+    }
+
+    public function test_store_fails_when_period_to_not_a_date(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['period_to' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_to');
+    }
+
+    public function test_store_fails_when_achievements_not_a_string(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['achievements' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('achievements');
+    }
+
+    public function test_store_fails_when_planned_next_period_not_a_string(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['planned_next_period' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_next_period');
+    }
+
+    public function test_store_fails_when_work_package_id_does_not_exist(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['work_package_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('work_package_id');
+    }
+
+    public function test_store_creates_report_with_optional_notes(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload([
+            'issues_this_period' => 'Blocked on API access.',
+            'issues_forecast'    => 'May slip by two days.',
+            'quality_notes'      => 'Test coverage at 90%.',
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.issues_this_period', 'Blocked on API access.')
+            ->assertJsonPath('data.issues_forecast', 'May slip by two days.')
+            ->assertJsonPath('data.quality_notes', 'Test coverage at 90%.');
+    }
+
+    public function test_store_fails_when_issues_this_period_not_a_string(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['issues_this_period' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issues_this_period');
+    }
+
+    public function test_store_fails_when_issues_forecast_not_a_string(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['issues_forecast' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issues_forecast');
+    }
+
+    public function test_store_fails_when_quality_notes_not_a_string(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['quality_notes' => ['not-a-string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('quality_notes');
+    }
+
     public function test_store_allowed_for_team_manager(): void
     {
         $tmPerson = Person::factory()->create();
@@ -246,6 +322,121 @@ class CheckpointReportControllerTest extends TestCase
         $this->putJson($this->reportUrl($report), ['title' => 'Updated'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated');
+    }
+
+    public function test_update_rejects_empty_title_when_present(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['title' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_title_too_long_when_present(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['title' => str_repeat('a', 256)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_empty_period_from_when_present(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['period_from' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_from');
+    }
+
+    public function test_update_rejects_empty_period_to_when_present(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['period_to' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_to');
+    }
+
+    public function test_update_rejects_period_to_before_period_from(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), [
+            'period_from' => '2026-06-14',
+            'period_to'   => '2026-06-01',
+        ])->assertUnprocessable()->assertJsonValidationErrors('period_to');
+    }
+
+    public function test_update_rejects_empty_achievements_when_present(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['achievements' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('achievements');
+    }
+
+    public function test_update_rejects_empty_planned_next_period_when_present(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['planned_next_period' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('planned_next_period');
+    }
+
+    public function test_update_rejects_nonexistent_work_package_id(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['work_package_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('work_package_id');
+    }
+
+    public function test_update_sets_optional_notes(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), [
+            'issues_this_period' => 'Blocked on API access.',
+            'issues_forecast'    => 'May slip by two days.',
+            'quality_notes'      => 'Test coverage at 90%.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.issues_this_period', 'Blocked on API access.')
+            ->assertJsonPath('data.issues_forecast', 'May slip by two days.')
+            ->assertJsonPath('data.quality_notes', 'Test coverage at 90%.');
+    }
+
+    public function test_update_rejects_non_string_issues_this_period(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['issues_this_period' => ['not-a-string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issues_this_period');
+    }
+
+    public function test_update_rejects_non_string_issues_forecast(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['issues_forecast' => ['not-a-string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('issues_forecast');
+    }
+
+    public function test_update_rejects_non_string_quality_notes(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['quality_notes' => ['not-a-string']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('quality_notes');
     }
 
     public function test_update_returns_409_on_submitted_report(): void

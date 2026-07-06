@@ -173,6 +173,31 @@ class MeetingControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_nonexistent_attendee_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['attendee_ids' => [999999]]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['attendee_ids.0']);
+    }
+
+    public function test_store_returns_422_when_date_time_is_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['date_time' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('date_time');
+    }
+
+    public function test_store_creates_meeting_with_agenda_and_minutes(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload([
+            'agenda'       => 'Discuss project kickoff',
+            'minutes_body' => 'Minutes go here',
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.agenda', 'Discuss project kickoff')
+            ->assertJsonPath('data.minutes_body', 'Minutes go here');
+    }
+
     public function test_store_forbidden_for_observer(): void
     {
         $observerPerson = $this->makeMember(ProjectRole::Observer);
@@ -260,6 +285,43 @@ class MeetingControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_update_succeeds_without_title_or_date_time(): void
+    {
+        $meeting = $this->makeMeeting(['title' => 'Original Title']);
+
+        $this->patchJson($this->meetingUrl($meeting), ['agenda' => 'Updated agenda'])
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Original Title')
+            ->assertJsonPath('data.agenda', 'Updated agenda');
+    }
+
+    public function test_update_returns_422_when_title_is_empty_string(): void
+    {
+        $meeting = $this->makeMeeting();
+
+        $this->patchJson($this->meetingUrl($meeting), ['title' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_returns_422_when_date_time_is_empty(): void
+    {
+        $meeting = $this->makeMeeting();
+
+        $this->patchJson($this->meetingUrl($meeting), ['date_time' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('date_time');
+    }
+
+    public function test_update_rejects_nonexistent_attendee_id(): void
+    {
+        $meeting = $this->makeMeeting();
+
+        $this->patchJson($this->meetingUrl($meeting), ['attendee_ids' => [999999]])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['attendee_ids.0']);
+    }
+
     // -------------------------------------------------------------------------
     // destroy
     // -------------------------------------------------------------------------
@@ -336,6 +398,76 @@ class MeetingControllerTest extends TestCase
         ])->assertUnprocessable();
     }
 
+    public function test_action_item_store_requires_description(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+
+        $this->postJson($this->actionItemsUrl($meeting), ['owner_id' => $owner->id])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_action_item_store_rejects_nonexistent_owner_id(): void
+    {
+        $meeting = $this->makeMeeting();
+
+        $this->postJson($this->actionItemsUrl($meeting), [
+            'owner_id'    => 999999,
+            'description' => 'Something',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('owner_id');
+    }
+
+    public function test_action_item_store_rejects_invalid_due_date(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+
+        $this->postJson($this->actionItemsUrl($meeting), [
+            'owner_id'    => $owner->id,
+            'description' => 'Something',
+            'due_date'    => 'not-a-date',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('due_date');
+    }
+
+    public function test_action_item_store_rejects_invalid_status(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+
+        $this->postJson($this->actionItemsUrl($meeting), [
+            'owner_id'    => $owner->id,
+            'description' => 'Something',
+            'status'      => 'pending',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_action_item_store_creates_item_with_due_date_and_status(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+
+        $response = $this->postJson($this->actionItemsUrl($meeting), [
+            'owner_id'    => $owner->id,
+            'description' => 'Follow up with vendor',
+            'due_date'    => '2026-08-15',
+            'status'      => MeetingActionItemStatus::Closed->value,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.status', MeetingActionItemStatus::Closed->value);
+
+        $this->assertDatabaseHas('meeting_action_items', [
+            'id'       => $response->json('data.id'),
+            'due_date' => '2026-08-15',
+        ]);
+    }
+
     public function test_action_item_store_forbidden_for_team_member(): void
     {
         $meeting      = $this->makeMeeting();
@@ -378,6 +510,62 @@ class MeetingControllerTest extends TestCase
         $this->patchJson($this->actionItemUrl($meeting, $item), ['status' => 'pending'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('status');
+    }
+
+    public function test_action_item_update_returns_422_when_owner_id_is_empty(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+        $item    = MeetingActionItem::factory()->create(['meeting_id' => $meeting->id, 'owner_id' => $owner->id]);
+
+        $this->patchJson($this->actionItemUrl($meeting, $item), ['owner_id' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('owner_id');
+    }
+
+    public function test_action_item_update_rejects_nonexistent_owner_id(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+        $item    = MeetingActionItem::factory()->create(['meeting_id' => $meeting->id, 'owner_id' => $owner->id]);
+
+        $this->patchJson($this->actionItemUrl($meeting, $item), ['owner_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('owner_id');
+    }
+
+    public function test_action_item_update_returns_422_when_description_is_empty(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+        $item    = MeetingActionItem::factory()->create(['meeting_id' => $meeting->id, 'owner_id' => $owner->id]);
+
+        $this->patchJson($this->actionItemUrl($meeting, $item), ['description' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_action_item_update_rejects_invalid_due_date(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+        $item    = MeetingActionItem::factory()->create(['meeting_id' => $meeting->id, 'owner_id' => $owner->id]);
+
+        $this->patchJson($this->actionItemUrl($meeting, $item), ['due_date' => 'not-a-date'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('due_date');
+    }
+
+    public function test_action_item_update_accepts_valid_due_date(): void
+    {
+        $meeting = $this->makeMeeting();
+        $owner   = $this->makeMember();
+        $item    = MeetingActionItem::factory()->create(['meeting_id' => $meeting->id, 'owner_id' => $owner->id]);
+
+        $this->patchJson($this->actionItemUrl($meeting, $item), ['due_date' => '2026-09-01'])
+            ->assertOk();
+
+        $this->assertDatabaseHas('meeting_action_items', ['id' => $item->id, 'due_date' => '2026-09-01']);
     }
 
     public function test_action_item_update_forbidden_for_team_member(): void
