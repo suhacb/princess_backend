@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\TestCasePriority;
+use App\Enums\TestCaseType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,12 +20,20 @@ class TestCase extends Model
         'title',
         'steps',
         'expected_result',
+        'priority',
+        'type',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
-        'steps' => 'array',
+        'steps'    => 'array',
+        'priority' => TestCasePriority::class,
+        'type'     => TestCaseType::class,
+    ];
+
+    protected $attributes = [
+        'priority' => 'medium',
     ];
 
     public function testScenario(): BelongsTo

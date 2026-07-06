@@ -327,6 +327,40 @@ class TestSessionControllerTest extends TestCase
             ->assertJsonPath('data.result', TestResultStatus::Pass->value);
     }
 
+    public function test_update_result_records_skipped(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson(
+            "/api/projects/{$this->project->id}/test-sessions/{$session->id}/results/{$scenario->id}",
+            ['result' => 'skipped']
+        )
+            ->assertOk()
+            ->assertJsonPath('data.result', TestResultStatus::Skipped->value);
+    }
+
+    public function test_update_result_rejects_invalid_result_value(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson(
+            "/api/projects/{$this->project->id}/test-sessions/{$session->id}/results/{$scenario->id}",
+            ['result' => 'nonsense']
+        )->assertUnprocessable();
+    }
+
     public function test_update_result_rejects_scenario_not_in_session(): void
     {
         $session  = $this->makeSession();
@@ -560,6 +594,30 @@ class TestSessionControllerTest extends TestCase
         $this->getJson($this->sessionUrl($session) . '/report')
             ->assertOk()
             ->assertJsonPath('data.title', 'My session')
+            ->assertJsonPath('data.summary.pass', 1)
+            ->assertJsonPath('data.summary.skipped', 0)
             ->assertJsonCount(1, 'data.results');
+    }
+
+    public function test_report_counts_skipped_results(): void
+    {
+        $session   = $this->makeSession(['title' => 'Session with skip']);
+        $scenario1 = $this->makeTestableScenario();
+        $scenario2 = $this->makeTestableScenario();
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario1->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario2->id,
+            'result'           => TestResultStatus::Skipped->value,
+        ]);
+
+        $this->getJson($this->sessionUrl($session) . '/report')
+            ->assertOk()
+            ->assertJsonPath('data.summary.pass', 1)
+            ->assertJsonPath('data.summary.skipped', 1);
     }
 }

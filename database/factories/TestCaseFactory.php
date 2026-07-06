@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\TestCasePriority;
+use App\Enums\TestCaseType;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\TestScenario;
@@ -22,6 +24,8 @@ class TestCaseFactory extends Factory
                 fake()->sentence(),
             ],
             'expected_result'  => fake()->sentence(),
+            'priority'         => fake()->randomElement(TestCasePriority::cases())->value,
+            'type'             => fake()->randomElement(TestCaseType::cases())->value,
             'created_by'       => Person::factory(),
         ];
     }

@@ -17,6 +17,8 @@ class TestCaseResource extends JsonResource
             'title'            => $this->title,
             'steps'            => $this->steps,
             'expected_result'  => $this->expected_result,
+            'priority'         => $this->priority?->value,
+            'type'             => $this->type?->value,
             'created_by'       => new PersonResource($this->whenLoaded('createdBy')),
             'updated_by'       => new PersonResource($this->whenLoaded('updatedBy')),
             'created_at'       => $this->created_at,

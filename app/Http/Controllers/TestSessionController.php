@@ -244,7 +244,7 @@ class TestSessionController extends Controller
     /**
      * Export a test session report with pass/fail summary and per-scenario results.
      *
-     * @response {"data": {"ref": "TS-001", "summary": {"pass": 10, "fail": 2, "blocked": 1, "not_run": 0}, "results": []}}
+     * @response {"data": {"ref": "TS-001", "summary": {"pass": 10, "fail": 2, "blocked": 1, "not_run": 0, "skipped": 0}, "results": []}}
      */
     public function report(Project $project, TestSession $testSession): JsonResponse
     {
@@ -257,6 +257,7 @@ class TestSessionController extends Controller
             'fail'    => $testSession->results->where('result.value', 'fail')->count(),
             'blocked' => $testSession->results->where('result.value', 'blocked')->count(),
             'not_run' => $testSession->results->where('result.value', 'not_run')->count(),
+            'skipped' => $testSession->results->where('result.value', 'skipped')->count(),
         ];
 
         return response()->json([

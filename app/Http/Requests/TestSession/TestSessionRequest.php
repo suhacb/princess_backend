@@ -3,6 +3,7 @@
 namespace App\Http\Requests\TestSession;
 
 use App\Enums\TeamType;
+use App\Enums\TestResultStatus;
 use App\Http\Requests\DynamicRequest;
 use Illuminate\Validation\Rule;
 
@@ -35,7 +36,7 @@ class TestSessionRequest extends DynamicRequest
     public function rulesForUpdateResult(): array
     {
         return [
-            'result'     => ['required', Rule::in(['pass', 'fail', 'blocked', 'not_run'])],
+            'result'     => ['required', Rule::enum(TestResultStatus::class)],
             'notes'      => ['nullable', 'string'],
             'defect_ref' => ['nullable', 'string', 'max:255'],
         ];
