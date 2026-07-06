@@ -32,10 +32,6 @@ class TestCase extends Model
         'type'     => TestCaseType::class,
     ];
 
-    protected $attributes = [
-        'priority' => 'medium',
-    ];
-
     public function testScenario(): BelongsTo
     {
         return $this->belongsTo(TestScenario::class);
