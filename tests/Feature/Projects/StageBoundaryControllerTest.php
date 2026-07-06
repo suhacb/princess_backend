@@ -83,6 +83,75 @@ class StageBoundaryControllerTest extends TestCase
         $this->postJson($this->boundaryUrl(), [])->assertUnprocessable()->assertJsonValidationErrors(['type']);
     }
 
+    public function test_store_rejects_invalid_type(): void
+    {
+        $this->postJson($this->boundaryUrl(), ['type' => 'not_a_type'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_accepts_title_and_notes_and_next_stage_id(): void
+    {
+        $nextStage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->postJson($this->boundaryUrl(), [
+            'type'          => BoundaryType::EndStageReport->value,
+            'title'         => 'End of Stage 1',
+            'notes'         => 'All deliverables complete.',
+            'next_stage_id' => $nextStage->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.title', 'End of Stage 1')
+            ->assertJsonPath('data.notes', 'All deliverables complete.')
+            ->assertJsonPath('data.next_stage_id', $nextStage->id);
+    }
+
+    public function test_store_rejects_title_exceeding_max_length(): void
+    {
+        $this->postJson($this->boundaryUrl(), [
+            'type'  => BoundaryType::EndStageReport->value,
+            'title' => str_repeat('a', 256),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_non_integer_next_stage_id(): void
+    {
+        $this->postJson($this->boundaryUrl(), [
+            'type'          => BoundaryType::EndStageReport->value,
+            'next_stage_id' => 'not-an-integer',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('next_stage_id');
+    }
+
+    public function test_store_requires_exception_summary_when_type_is_exception_report(): void
+    {
+        $this->postJson($this->boundaryUrl(), ['type' => BoundaryType::ExceptionReport->value])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('exception_summary');
+    }
+
+    public function test_store_accepts_exception_report_with_exception_summary(): void
+    {
+        $this->postJson($this->boundaryUrl(), [
+            'type'              => BoundaryType::ExceptionReport->value,
+            'exception_summary' => 'Budget tolerance exceeded.',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.exception_summary', 'Budget tolerance exceeded.');
+    }
+
+    public function test_store_does_not_require_exception_summary_for_other_types(): void
+    {
+        $this->postJson($this->boundaryUrl(), ['type' => BoundaryType::EndStageReport->value])
+            ->assertCreated();
+    }
+
     public function test_show_returns_boundary(): void
     {
         $boundary = StageBoundary::factory()->create([
@@ -105,6 +174,71 @@ class StageBoundaryControllerTest extends TestCase
         $this->putJson($this->boundaryUrl($boundary), ['title' => 'Updated title'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated title');
+    }
+
+    public function test_update_rejects_title_exceeding_max_length(): void
+    {
+        $boundary = StageBoundary::factory()->create([
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->boundaryUrl($boundary), ['title' => str_repeat('a', 256)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_modifies_notes(): void
+    {
+        $boundary = StageBoundary::factory()->create([
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->boundaryUrl($boundary), ['notes' => 'Updated notes.'])
+            ->assertOk()
+            ->assertJsonPath('data.notes', 'Updated notes.');
+    }
+
+    public function test_update_modifies_next_stage_id(): void
+    {
+        $boundary = StageBoundary::factory()->create([
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+        $nextStage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->boundaryUrl($boundary), ['next_stage_id' => $nextStage->id])
+            ->assertOk()
+            ->assertJsonPath('data.next_stage_id', $nextStage->id);
+    }
+
+    public function test_update_rejects_non_integer_next_stage_id(): void
+    {
+        $boundary = StageBoundary::factory()->create([
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->boundaryUrl($boundary), ['next_stage_id' => 'not-an-integer'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('next_stage_id');
+    }
+
+    public function test_update_modifies_exception_summary(): void
+    {
+        $boundary = StageBoundary::factory()->create([
+            'stage_id'   => $this->stage->id,
+            'created_by' => $this->person->id,
+            'type'       => BoundaryType::ExceptionReport,
+        ]);
+
+        $this->putJson($this->boundaryUrl($boundary), ['exception_summary' => 'Revised exception summary.'])
+            ->assertOk()
+            ->assertJsonPath('data.exception_summary', 'Revised exception summary.');
     }
 
     public function test_update_rejects_non_draft_boundary(): void

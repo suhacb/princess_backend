@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\TestCase\TestCaseRequest;
+use App\Enums\TestCasePriority;
+use App\Http\Requests\TestCase\StoreTestCaseRequest;
+use App\Http\Requests\TestCase\UpdateTestCaseRequest;
 use App\Http\Resources\TestCaseResource;
 use App\Models\Project;
 use App\Models\TestCase;
@@ -33,15 +35,17 @@ class TestCaseController extends Controller
     /**
      * Create a test case for a scenario.
      *
-     * @response 201 {"data": {"id": 1, "ref": "TC-001", "title": "..."}}
+     * @response 201 {"data": {"id": 1, "ref": "TC-001", "title": "...", "priority": "medium", "type": "positive"}}
      */
-    public function store(TestCaseRequest $request, Project $project, TestScenario $testScenario): TestCaseResource
+    public function store(StoreTestCaseRequest $request, Project $project, TestScenario $testScenario): TestCaseResource
     {
         $this->authorize('create', [TestCase::class, $project, $testScenario]);
 
         $validated = $request->validated();
 
-        $testCase = $testScenario->testCases()->create(array_merge($validated, [
+        $testCase = $testScenario->testCases()->create(array_merge([
+            'priority' => TestCasePriority::Medium->value,
+        ], $validated, [
             'project_id' => $project->id,
             'ref'        => TestCase::nextRef($project->id),
             'created_by' => auth()->user()->person_id,
@@ -53,7 +57,7 @@ class TestCaseController extends Controller
     /**
      * Get a test case.
      *
-     * @response {"data": {"id": 1, "ref": "TC-001", "steps": "...", "expected_result": "..."}}
+     * @response {"data": {"id": 1, "ref": "TC-001", "steps": "...", "expected_result": "...", "priority": "medium", "type": "positive"}}
      */
     public function show(Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
     {
@@ -67,7 +71,7 @@ class TestCaseController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(TestCaseRequest $request, Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
+    public function update(UpdateTestCaseRequest $request, Project $project, TestScenario $testScenario, TestCase $testCase): TestCaseResource
     {
         $this->authorize('update', [TestCase::class, $project, $testScenario, $testCase]);
 

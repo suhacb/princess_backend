@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TestScenarioStatus;
-use App\Http\Requests\TestScenario\TestScenarioRequest;
+use App\Http\Requests\TestScenario\StoreTestScenarioRequest;
+use App\Http\Requests\TestScenario\UpdateTestScenarioRequest;
+use App\Http\Requests\TestScenario\MarkTestableTestScenarioRequest;
 use App\Http\Resources\AcceptanceCriterionResource;
 use App\Http\Resources\TestCaseResource;
 use App\Http\Resources\TestScenarioResource;
@@ -58,7 +60,7 @@ class TestScenarioController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "TSC-001", "status": "draft", "is_testable": false}}
      */
-    public function store(TestScenarioRequest $request, Project $project): TestScenarioResource
+    public function store(StoreTestScenarioRequest $request, Project $project): TestScenarioResource
     {
         $this->authorize('create', [TestScenario::class, $project]);
 
@@ -101,7 +103,7 @@ class TestScenarioController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(TestScenarioRequest $request, Project $project, TestScenario $testScenario): TestScenarioResource
+    public function update(UpdateTestScenarioRequest $request, Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('update', [TestScenario::class, $project, $testScenario]);
 
@@ -218,7 +220,7 @@ class TestScenarioController extends Controller
      *
      * @response {"data": {"id": 1, "is_testable": true}}
      */
-    public function markTestable(TestScenarioRequest $request, Project $project, TestScenario $testScenario): TestScenarioResource
+    public function markTestable(MarkTestableTestScenarioRequest $request, Project $project, TestScenario $testScenario): TestScenarioResource
     {
         $this->authorize('markTestable', [TestScenario::class, $project, $testScenario]);
 

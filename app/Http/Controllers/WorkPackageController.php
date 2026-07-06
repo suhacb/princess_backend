@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WorkPackageStatus;
-use App\Http\Requests\WorkPackage\WorkPackageRequest;
+use App\Http\Requests\WorkPackage\StoreWorkPackageRequest;
+use App\Http\Requests\WorkPackage\UpdateWorkPackageRequest;
 use App\Http\Resources\WorkPackageResource;
 use App\Models\Project;
 use App\Models\WorkPackage;
@@ -34,7 +35,7 @@ class WorkPackageController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "...", "status": "draft"}}
      */
-    public function store(WorkPackageRequest $request, Project $project): WorkPackageResource
+    public function store(StoreWorkPackageRequest $request, Project $project): WorkPackageResource
     {
         $this->authorize('create', [WorkPackage::class, $project]);
 
@@ -77,7 +78,7 @@ class WorkPackageController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(WorkPackageRequest $request, Project $project, WorkPackage $workPackage): WorkPackageResource
+    public function update(UpdateWorkPackageRequest $request, Project $project, WorkPackage $workPackage): WorkPackageResource
     {
         $this->authorize('update', [WorkPackage::class, $project, $workPackage]);
 

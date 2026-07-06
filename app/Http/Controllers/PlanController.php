@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\PlanStatus;
 use App\Enums\PlanType;
-use App\Http\Requests\Plan\PlanRequest;
+use App\Http\Requests\Plan\StorePlanRequest;
+use App\Http\Requests\Plan\UpdatePlanRequest;
 use App\Http\Resources\PlanResource;
 use App\Models\Plan;
 use App\Models\Project;
@@ -42,7 +43,7 @@ class PlanController extends Controller
      *
      * @response 201 {"data": {"id": 1, "type": "stage", "status": "draft"}}
      */
-    public function store(PlanRequest $request, Project $project): PlanResource
+    public function store(StorePlanRequest $request, Project $project): PlanResource
     {
         $this->authorize('create', [Plan::class, $project]);
 
@@ -84,7 +85,7 @@ class PlanController extends Controller
      *
      * @response {"data": {"id": 1, "name": "Updated"}}
      */
-    public function update(PlanRequest $request, Project $project, Plan $plan): PlanResource
+    public function update(UpdatePlanRequest $request, Project $project, Plan $plan): PlanResource
     {
         $this->authorize('update', [Plan::class, $project, $plan]);
 

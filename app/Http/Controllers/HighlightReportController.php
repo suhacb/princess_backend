@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\HighlightReportStatus;
-use App\Http\Requests\HighlightReport\HighlightReportRequest;
+use App\Http\Requests\HighlightReport\StoreHighlightReportRequest;
+use App\Http\Requests\HighlightReport\UpdateHighlightReportRequest;
 use App\Http\Resources\HighlightReportResource;
 use App\Models\HighlightReport;
 use App\Models\Project;
@@ -45,7 +46,7 @@ class HighlightReportController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "HLR-001", "status": "draft"}}
      */
-    public function store(HighlightReportRequest $request, Project $project): HighlightReportResource
+    public function store(StoreHighlightReportRequest $request, Project $project): HighlightReportResource
     {
         $this->authorize('create', [HighlightReport::class, $project]);
 
@@ -79,7 +80,7 @@ class HighlightReportController extends Controller
      * @response {"data": {"id": 1, "title": "Updated"}}
      * @response 409 {"message": "Only draft reports can be edited."}
      */
-    public function update(HighlightReportRequest $request, Project $project, HighlightReport $highlightReport): HighlightReportResource
+    public function update(UpdateHighlightReportRequest $request, Project $project, HighlightReport $highlightReport): HighlightReportResource
     {
         $this->authorize('update', [HighlightReport::class, $project, $highlightReport]);
 

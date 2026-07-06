@@ -8,4 +8,5 @@ enum TestResultStatus: string
     case Fail    = 'fail';
     case Blocked = 'blocked';
     case NotRun  = 'not_run';
+    case Skipped = 'skipped';
 }

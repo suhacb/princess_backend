@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\CheckpointReportStatus;
-use App\Http\Requests\CheckpointReport\CheckpointReportRequest;
+use App\Http\Requests\CheckpointReport\StoreCheckpointReportRequest;
+use App\Http\Requests\CheckpointReport\UpdateCheckpointReportRequest;
 use App\Http\Resources\CheckpointReportResource;
 use App\Models\CheckpointReport;
 use App\Models\Project;
@@ -45,7 +46,7 @@ class CheckpointReportController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "CPR-001", "status": "draft"}}
      */
-    public function store(CheckpointReportRequest $request, Project $project): CheckpointReportResource
+    public function store(StoreCheckpointReportRequest $request, Project $project): CheckpointReportResource
     {
         $this->authorize('create', [CheckpointReport::class, $project]);
 
@@ -79,7 +80,7 @@ class CheckpointReportController extends Controller
      * @response {"data": {"id": 1, "title": "Updated"}}
      * @response 409 {"message": "Only draft reports can be edited."}
      */
-    public function update(CheckpointReportRequest $request, Project $project, CheckpointReport $checkpointReport): CheckpointReportResource
+    public function update(UpdateCheckpointReportRequest $request, Project $project, CheckpointReport $checkpointReport): CheckpointReportResource
     {
         $this->authorize('update', [CheckpointReport::class, $project, $checkpointReport]);
 

@@ -190,6 +190,64 @@ class HighlightReportControllerTest extends TestCase
             ->assertJsonValidationErrors('next_period_work');
     }
 
+    public function test_store_fails_when_stage_id_does_not_exist(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['stage_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_store_creates_report_with_valid_stage_id(): void
+    {
+        $stage = Stage::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['stage_id' => $stage->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.stage_id', $stage->id);
+    }
+
+    public function test_store_fails_when_title_too_long(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_fails_when_period_from_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['period_from' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_from');
+    }
+
+    public function test_store_requires_period_to(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['period_to' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_to');
+    }
+
+    public function test_store_fails_when_schedule_status_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['schedule_status' => 'blue']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('schedule_status');
+    }
+
+    public function test_store_fails_when_forecast_finish_invalid(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['forecast_finish' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('forecast_finish');
+    }
+
+    public function test_store_creates_report_with_valid_forecast_finish(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['forecast_finish' => '2026-09-01']))
+            ->assertCreated()
+            ->assertJsonPath('data.forecast_finish', '2026-09-01');
+    }
+
     public function test_store_forbidden_for_team_manager(): void
     {
         $p = Person::factory()->create();
@@ -232,6 +290,91 @@ class HighlightReportControllerTest extends TestCase
         $this->putJson($this->reportUrl($report), ['title' => 'Updated'])
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated');
+    }
+
+    public function test_update_fails_when_title_empty(): void
+    {
+        $report = $this->makeReport(['title' => 'Original']);
+
+        $this->putJson($this->reportUrl($report), ['title' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_fails_when_period_from_invalid(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['period_from' => 'not-a-date'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_from');
+    }
+
+    public function test_update_fails_when_period_to_before_period_from(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), [
+            'period_from' => '2026-06-30',
+            'period_to'   => '2026-06-01',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('period_to');
+    }
+
+    public function test_update_fails_when_this_period_work_empty(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['this_period_work' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('this_period_work');
+    }
+
+    public function test_update_fails_when_next_period_work_empty(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['next_period_work' => ''])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('next_period_work');
+    }
+
+    public function test_update_fails_when_budget_status_invalid(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['budget_status' => 'blue'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('budget_status');
+    }
+
+    public function test_update_fails_when_schedule_status_invalid(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['schedule_status' => 'blue'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('schedule_status');
+    }
+
+    public function test_update_fails_when_stage_id_does_not_exist(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['stage_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_update_edits_stage_id(): void
+    {
+        $report = $this->makeReport();
+        $stage  = Stage::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+
+        $this->putJson($this->reportUrl($report), ['stage_id' => $stage->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $stage->id);
     }
 
     public function test_update_returns_409_on_submitted_report(): void

@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\ExceptionReportStatus;
 use App\Enums\ExceptionTriggerType;
-use App\Http\Requests\ExceptionReport\ExceptionReportRequest;
+use App\Http\Requests\ExceptionReport\StoreExceptionReportRequest;
+use App\Http\Requests\ExceptionReport\UpdateExceptionReportRequest;
 use App\Http\Resources\ExceptionReportResource;
 use App\Models\ExceptionReport;
 use App\Models\Project;
@@ -54,7 +55,7 @@ class ExceptionReportController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "EXR-001", "status": "draft"}}
      */
-    public function store(ExceptionReportRequest $request, Project $project): ExceptionReportResource
+    public function store(StoreExceptionReportRequest $request, Project $project): ExceptionReportResource
     {
         $this->authorize('create', [ExceptionReport::class, $project]);
 
@@ -88,7 +89,7 @@ class ExceptionReportController extends Controller
      * @response {"data": {"id": 1, "title": "Updated"}}
      * @response 409 {"message": "Only draft reports can be edited."}
      */
-    public function update(ExceptionReportRequest $request, Project $project, ExceptionReport $exceptionReport): ExceptionReportResource
+    public function update(UpdateExceptionReportRequest $request, Project $project, ExceptionReport $exceptionReport): ExceptionReportResource
     {
         $this->authorize('update', [ExceptionReport::class, $project, $exceptionReport]);
 

@@ -3,10 +3,12 @@
 namespace Tests\Feature\Projects;
 
 use App\Enums\DailyLogEntryType;
+use App\Enums\DailyLogSource;
 use App\Enums\ProjectRole;
 use App\Models\DailyLogEntry;
 use App\Models\Person;
 use App\Models\Project;
+use App\Models\Stage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -104,6 +106,74 @@ class DailyLogControllerTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_store_requires_date(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['date' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('date');
+    }
+
+    public function test_store_rejects_invalid_date(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['date' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('date');
+    }
+
+    public function test_store_requires_entry_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['entry_type' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('entry_type');
+    }
+
+    public function test_store_rejects_invalid_entry_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['entry_type' => 'not_a_type']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('entry_type');
+    }
+
+    public function test_store_requires_body(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['body' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('body');
+    }
+
+    public function test_store_accepts_valid_stage_id(): void
+    {
+        $stage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->postJson($this->indexUrl(), $this->validPayload(['stage_id' => $stage->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.stage_id', $stage->id);
+    }
+
+    public function test_store_rejects_nonexistent_stage_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['stage_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_store_accepts_valid_source(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['source' => DailyLogSource::AiSuggested->value]))
+            ->assertCreated()
+            ->assertJsonPath('data.source', DailyLogSource::AiSuggested->value);
+    }
+
+    public function test_store_rejects_invalid_source(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['source' => 'not_a_source']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('source');
+    }
+
     public function test_show_returns_entry(): void
     {
         $entry = DailyLogEntry::factory()->create([
@@ -126,6 +196,94 @@ class DailyLogControllerTest extends TestCase
         $this->putJson($this->entryUrl($entry), ['body' => 'Updated note.'])
             ->assertOk()
             ->assertJsonPath('data.body', 'Updated note.');
+    }
+
+    public function test_update_rejects_blank_date(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['date' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('date');
+    }
+
+    public function test_update_rejects_invalid_entry_type(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['entry_type' => 'not_a_type'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('entry_type');
+    }
+
+    public function test_update_rejects_blank_body(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['body' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('body');
+    }
+
+    public function test_update_rejects_nonexistent_stage_id(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['stage_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_update_accepts_valid_stage_id(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+        $stage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['stage_id' => $stage->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $stage->id);
+    }
+
+    public function test_update_rejects_invalid_source(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['source' => 'not_a_source'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('source');
+    }
+
+    public function test_update_accepts_valid_source(): void
+    {
+        $entry = DailyLogEntry::factory()->create([
+            'project_id' => $this->project->id,
+            'author_id'  => $this->person->id,
+        ]);
+
+        $this->putJson($this->entryUrl($entry), ['source' => DailyLogSource::EmailDerived->value])
+            ->assertOk()
+            ->assertJsonPath('data.source', DailyLogSource::EmailDerived->value);
     }
 
     public function test_destroy_deletes_entry(): void

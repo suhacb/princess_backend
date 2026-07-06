@@ -203,6 +203,20 @@ class QaDocumentControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_nonexistent_requirement_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['requirement_ids' => [999999]]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('requirement_ids.0');
+    }
+
+    public function test_store_rejects_nonexistent_supersedes_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['supersedes_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('supersedes_id');
+    }
+
     // -------------------------------------------------------------------------
     // store – validation
     // -------------------------------------------------------------------------
@@ -226,6 +240,20 @@ class QaDocumentControllerTest extends TestCase
         $this->postJson($this->indexUrl(), $this->storePayload(['title' => null]))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_accepts_valid_version(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['version' => 'v1.0']))
+            ->assertCreated()
+            ->assertJsonPath('data.version', 'v1.0');
+    }
+
+    public function test_store_rejects_version_exceeding_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['version' => str_repeat('a', 51)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('version');
     }
 
     public function test_store_forbidden_for_read_only_role(): void
@@ -315,6 +343,24 @@ class QaDocumentControllerTest extends TestCase
 
         $this->putJson($this->documentUrl($doc), ['title' => 'Trying to edit superseded'])
             ->assertUnprocessable();
+    }
+
+    public function test_update_rejects_null_title(): void
+    {
+        $doc = $this->makeDocument(['title' => 'Original']);
+
+        $this->putJson($this->documentUrl($doc), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_requires_documentable_id_when_documentable_type_present(): void
+    {
+        $doc = $this->makeDocument();
+
+        $this->putJson($this->documentUrl($doc), ['documentable_type' => 'meeting'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('documentable_id');
     }
 
     public function test_update_forbidden_for_read_only_role(): void
@@ -778,6 +824,17 @@ class QaDocumentControllerTest extends TestCase
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('documentable_type');
+    }
+
+    public function test_store_requires_documentable_id_when_documentable_type_present(): void
+    {
+        $this->postJson($this->indexUrl(), [
+            'type'              => QaDocumentType::MeetingMinutes->value,
+            'title'             => 'Missing documentable id',
+            'documentable_type' => 'meeting',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('documentable_id');
     }
 
     // -------------------------------------------------------------------------

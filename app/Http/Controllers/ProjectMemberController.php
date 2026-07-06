@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProjectRole;
-use App\Http\Requests\ProjectMember\ProjectMemberRequest;
+use App\Http\Requests\ProjectMember\StoreProjectMemberRequest;
+use App\Http\Requests\ProjectMember\UpdateProjectMemberRequest;
 use App\Http\Resources\ProjectMemberResource;
 use App\Models\Project;
 use App\Models\ProjectMember;
@@ -35,7 +36,7 @@ class ProjectMemberController extends Controller
      * @response 201 {"data": {"id": 1, "role": "team_member", "person": {}}}
      * @response 422 {"message": "The person id has already been taken."}
      */
-    public function store(ProjectMemberRequest $request, Project $project): ProjectMemberResource
+    public function store(StoreProjectMemberRequest $request, Project $project): ProjectMemberResource
     {
         $this->authorize('create', [ProjectMember::class, $project]);
 
@@ -50,7 +51,7 @@ class ProjectMemberController extends Controller
      * @response {"data": {"id": 1, "role": "senior_user"}}
      * @response 422 {"message": "Cannot remove the last project manager."}
      */
-    public function update(ProjectMemberRequest $request, Project $project, ProjectMember $member): ProjectMemberResource
+    public function update(UpdateProjectMemberRequest $request, Project $project, ProjectMember $member): ProjectMemberResource
     {
         $this->authorize('update', [ProjectMember::class, $project, $member]);
 

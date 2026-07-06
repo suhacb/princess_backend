@@ -6,7 +6,11 @@ use App\Documents\Metadata\DocumentMetadataFactory;
 use App\Enums\QaDocumentStatus;
 use App\Enums\QaDocumentType;
 use App\Enums\RequirementStatus;
-use App\Http\Requests\QaDocument\QaDocumentRequest;
+use App\Http\Requests\QaDocument\StoreQaDocumentRequest;
+use App\Http\Requests\QaDocument\UpdateQaDocumentRequest;
+use App\Http\Requests\QaDocument\SendForReviewQaDocumentRequest;
+use App\Http\Requests\QaDocument\RejectQaDocumentRequest;
+use App\Http\Requests\QaDocument\DocumentableTypes;
 use App\Http\Resources\QaDocumentResource;
 use App\Jobs\Document\ConvertDocumentJob;
 use App\Models\Project;
@@ -55,7 +59,7 @@ class QaDocumentController extends Controller
      *
      * @response 201 {"data": {"id": 1, "type": "highlight_report", "category": "reporting", "status": "draft"}}
      */
-    public function store(QaDocumentRequest $request, Project $project): QaDocumentResource
+    public function store(StoreQaDocumentRequest $request, Project $project): QaDocumentResource
     {
         $this->authorize('create', [QaDocument::class, $project]);
 
@@ -114,7 +118,7 @@ class QaDocumentController extends Controller
      * @response {"data": {"id": 1, "title": "Updated"}}
      * @response 422 {"message": "A confirmed document cannot be edited."}
      */
-    public function update(QaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
+    public function update(UpdateQaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('update', [QaDocument::class, $project, $qaDocument]);
 
@@ -169,7 +173,7 @@ class QaDocumentController extends Controller
      * @response {"data": {"id": 1, "status": "in_review"}}
      * @response 409 {"message": "Only draft documents can be sent for review."}
      */
-    public function sendForReview(QaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
+    public function sendForReview(SendForReviewQaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('sendForReview', [QaDocument::class, $project, $qaDocument]);
 
@@ -193,7 +197,7 @@ class QaDocumentController extends Controller
      * @response {"data": {"id": 1, "status": "draft"}}
      * @response 409 {"message": "Only documents in review can be rejected."}
      */
-    public function reject(QaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
+    public function reject(RejectQaDocumentRequest $request, Project $project, QaDocument $qaDocument): QaDocumentResource
     {
         $this->authorize('reject', [QaDocument::class, $project, $qaDocument]);
 
@@ -270,7 +274,7 @@ class QaDocumentController extends Controller
     private function resolveDocumentable(array $validated): array
     {
         if (isset($validated['documentable_type'])) {
-            $types = QaDocumentRequest::documentableTypes();
+            $types = DocumentableTypes::map();
             $validated['documentable_type'] = $types[$validated['documentable_type']] ?? $validated['documentable_type'];
         }
 

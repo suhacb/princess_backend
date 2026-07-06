@@ -69,6 +69,7 @@ class TestCaseControllerTest extends BaseTestCase
             'title'           => 'Navigate to login page',
             'steps'           => ['Open browser', 'Go to /login', 'Verify form is visible'],
             'expected_result' => 'Login form is displayed with username and password fields.',
+            'type'            => 'positive',
         ], $overrides);
     }
 
@@ -106,14 +107,47 @@ class TestCaseControllerTest extends BaseTestCase
             ->assertJsonPath('data.ref', 'TC-001')
             ->assertJsonPath('data.title', 'Navigate to login page')
             ->assertJsonPath('data.steps', ['Open browser', 'Go to /login', 'Verify form is visible'])
-            ->assertJsonPath('data.expected_result', 'Login form is displayed with username and password fields.');
+            ->assertJsonPath('data.expected_result', 'Login form is displayed with username and password fields.')
+            ->assertJsonPath('data.priority', 'medium')
+            ->assertJsonPath('data.type', 'positive');
 
         $this->assertDatabaseHas('test_cases', [
             'test_scenario_id' => $this->scenario->id,
             'project_id'       => $this->project->id,
             'ref'              => 'TC-001',
             'created_by'       => $this->person->id,
+            'priority'         => 'medium',
+            'type'             => 'positive',
         ]);
+    }
+
+    public function test_store_accepts_explicit_priority_and_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['priority' => 'high', 'type' => 'edge']))
+            ->assertCreated()
+            ->assertJsonPath('data.priority', 'high')
+            ->assertJsonPath('data.type', 'edge');
+    }
+
+    public function test_store_requires_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['type' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_rejects_invalid_type(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['type' => 'nonsense']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_store_rejects_invalid_priority(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['priority' => 'nonsense']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
     }
 
     public function test_store_ref_increments_per_project(): void
@@ -144,6 +178,13 @@ class TestCaseControllerTest extends BaseTestCase
             ->assertJsonValidationErrors('title');
     }
 
+    public function test_store_rejects_title_exceeding_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
     public function test_store_requires_steps(): void
     {
         $this->postJson($this->indexUrl(), $this->storePayload(['steps' => null]))
@@ -163,6 +204,13 @@ class TestCaseControllerTest extends BaseTestCase
         $this->postJson($this->indexUrl(), $this->storePayload(['steps' => 'just a string']))
             ->assertUnprocessable()
             ->assertJsonValidationErrors('steps');
+    }
+
+    public function test_store_rejects_non_string_step_element(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['steps' => ['Open browser', 123]]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('steps.1');
     }
 
     public function test_store_requires_expected_result(): void
@@ -210,6 +258,82 @@ class TestCaseControllerTest extends BaseTestCase
             ->assertOk()
             ->assertJsonPath('data.title', 'Updated title')
             ->assertJsonPath('data.steps', ['Step A', 'Step B']);
+    }
+
+    public function test_update_edits_priority_and_type(): void
+    {
+        $tc = $this->makeTestCase(['priority' => 'low', 'type' => 'positive']);
+
+        $this->putJson($this->testCaseUrl($tc), [
+            'priority' => 'high',
+            'type'     => 'negative',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.priority', 'high')
+            ->assertJsonPath('data.type', 'negative');
+    }
+
+    public function test_update_rejects_blank_title(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_empty_steps_array(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['steps' => []])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('steps');
+    }
+
+    public function test_update_rejects_non_array_steps(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['steps' => 'not an array'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('steps');
+    }
+
+    public function test_update_edits_expected_result(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['expected_result' => 'Updated expected result.'])
+            ->assertOk()
+            ->assertJsonPath('data.expected_result', 'Updated expected result.');
+    }
+
+    public function test_update_rejects_blank_expected_result(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['expected_result' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('expected_result');
+    }
+
+    public function test_update_rejects_invalid_type(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['type' => 'nonsense'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('type');
+    }
+
+    public function test_update_rejects_invalid_priority(): void
+    {
+        $tc = $this->makeTestCase();
+
+        $this->putJson($this->testCaseUrl($tc), ['priority' => 'nonsense'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
     }
 
     public function test_update_forbidden_for_read_only_role(): void

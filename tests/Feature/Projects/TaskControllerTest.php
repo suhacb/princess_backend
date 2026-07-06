@@ -228,6 +228,80 @@ class TaskControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_accepts_description(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['description' => 'Some details about the task']))
+            ->assertCreated()
+            ->assertJsonPath('data.description', 'Some details about the task');
+    }
+
+    public function test_store_rejects_non_string_description(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['description' => ['not', 'a', 'string']]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_store_rejects_non_integer_stage_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['stage_id' => 'abc']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_store_rejects_nonexistent_stage_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['stage_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
+    public function test_store_rejects_non_integer_work_package_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['work_package_id' => 'abc']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('work_package_id');
+    }
+
+    public function test_store_rejects_nonexistent_work_package_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['work_package_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('work_package_id');
+    }
+
+    public function test_store_rejects_non_integer_assigned_to(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['assigned_to' => 'abc']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assigned_to');
+    }
+
+    public function test_store_rejects_nonexistent_assigned_to(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['assigned_to' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('assigned_to');
+    }
+
+    public function test_store_accepts_due_date(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['due_date' => '2026-08-01']))
+            ->assertCreated();
+
+        $this->assertDatabaseHas('tasks', [
+            'title'    => 'Deploy to staging',
+            'due_date' => '2026-08-01',
+        ]);
+    }
+
+    public function test_store_rejects_invalid_due_date(): void
+    {
+        $this->postJson($this->indexUrl(), $this->validPayload(['due_date' => 'not-a-date']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('due_date');
+    }
+
     public function test_store_forbidden_for_observer(): void
     {
         $observerPerson = Person::factory()->create();
@@ -288,6 +362,42 @@ class TaskControllerTest extends TestCase
             'id'         => $task->id,
             'updated_by' => $this->person->id,
         ]);
+    }
+
+    public function test_update_rejects_null_title(): void
+    {
+        $task = $this->makeTask();
+
+        $this->patchJson($this->taskUrl($task), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_invalid_status(): void
+    {
+        $task = $this->makeTask();
+
+        $this->patchJson($this->taskUrl($task), ['status' => 'flying'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+
+    public function test_update_accepts_valid_priority(): void
+    {
+        $task = $this->makeTask(['priority' => TaskPriority::Low->value]);
+
+        $this->patchJson($this->taskUrl($task), ['priority' => TaskPriority::Critical->value])
+            ->assertOk()
+            ->assertJsonPath('data.priority', TaskPriority::Critical->value);
+    }
+
+    public function test_update_rejects_invalid_priority(): void
+    {
+        $task = $this->makeTask();
+
+        $this->patchJson($this->taskUrl($task), ['priority' => 'extreme'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('priority');
     }
 
     public function test_update_forbidden_for_observer(): void

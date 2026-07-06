@@ -255,6 +255,64 @@ class AcceptanceCriterionControllerTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_store_rejects_non_integer_requirement_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['requirement_id' => 'not-an-integer']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('requirement_id');
+    }
+
+    public function test_store_rejects_nonexistent_requirement_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['requirement_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('requirement_id');
+    }
+
+    public function test_store_rejects_title_exceeding_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['title' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_rejects_acceptance_threshold_exceeding_max_length(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['acceptance_threshold' => str_repeat('a', 256)]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_threshold');
+    }
+
+    public function test_store_rejects_nonexistent_verifier_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['verifier_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('verifier_id');
+    }
+
+    public function test_store_rejects_invalid_verification_method(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['verification_method' => 'not-a-method']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('verification_method');
+    }
+
+    public function test_store_accepts_measurement_method_and_acceptance_threshold(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload([
+            'measurement_method'   => 'Automated load test',
+            'acceptance_threshold' => 'Under 200ms for 95% of requests',
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.measurement_method', 'Automated load test')
+            ->assertJsonPath('data.acceptance_threshold', 'Under 200ms for 95% of requests');
+
+        $this->assertDatabaseHas('acceptance_criteria', [
+            'measurement_method'   => 'Automated load test',
+            'acceptance_threshold' => 'Under 200ms for 95% of requests',
+        ]);
+    }
+
     // -------------------------------------------------------------------------
     // show
     // -------------------------------------------------------------------------
@@ -327,6 +385,98 @@ class AcceptanceCriterionControllerTest extends TestCase
         $this->actingAs($observer)
             ->putJson($this->criterionUrl($ac), ['description' => 'Hijacked'])
             ->assertForbidden();
+    }
+
+    // -------------------------------------------------------------------------
+    // update – validation
+    // -------------------------------------------------------------------------
+
+    public function test_update_rejects_title_set_to_null(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_description_set_to_null(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['description' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_update_rejects_title_exceeding_max_length(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['title' => str_repeat('a', 256)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_acceptance_threshold_exceeding_max_length(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['acceptance_threshold' => str_repeat('a', 256)])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('acceptance_threshold');
+    }
+
+    public function test_update_rejects_nonexistent_verifier_id(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['verifier_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('verifier_id');
+    }
+
+    public function test_update_rejects_invalid_verification_method(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['verification_method' => 'not-a-method'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('verification_method');
+    }
+
+    public function test_update_accepts_verifier_and_verification_method(): void
+    {
+        $ac             = $this->makeCriterion();
+        $verifierPerson = Person::factory()->create();
+        $this->project->members()->create(['person_id' => $verifierPerson->id, 'role' => ProjectRole::TeamMember->value]);
+
+        $this->putJson($this->criterionUrl($ac), [
+            'verifier_id'         => $verifierPerson->id,
+            'verification_method' => VerificationMethod::Demo->value,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.verification_method', VerificationMethod::Demo->value);
+
+        $this->assertDatabaseHas('acceptance_criteria', [
+            'id'                  => $ac->id,
+            'verifier_id'         => $verifierPerson->id,
+            'verification_method' => VerificationMethod::Demo->value,
+        ]);
+    }
+
+    public function test_update_accepts_acceptance_threshold(): void
+    {
+        $ac = $this->makeCriterion();
+
+        $this->putJson($this->criterionUrl($ac), ['acceptance_threshold' => 'Under 300ms for 99% of requests'])
+            ->assertOk()
+            ->assertJsonPath('data.acceptance_threshold', 'Under 300ms for 99% of requests');
+
+        $this->assertDatabaseHas('acceptance_criteria', [
+            'id'                    => $ac->id,
+            'acceptance_threshold'  => 'Under 300ms for 99% of requests',
+        ]);
     }
 
     // -------------------------------------------------------------------------

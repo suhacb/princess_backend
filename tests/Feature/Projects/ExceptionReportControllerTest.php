@@ -236,6 +236,22 @@ class ExceptionReportControllerTest extends TestCase
             ->assertJsonValidationErrors('recommendation');
     }
 
+    public function test_store_accepts_valid_stage_id(): void
+    {
+        $stage = Stage::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+
+        $this->postJson($this->indexUrl(), $this->storePayload(['stage_id' => $stage->id]))
+            ->assertCreated()
+            ->assertJsonPath('data.stage_id', $stage->id);
+    }
+
+    public function test_store_rejects_nonexistent_stage_id(): void
+    {
+        $this->postJson($this->indexUrl(), $this->storePayload(['stage_id' => 999999]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
+    }
+
     public function test_store_forbidden_for_observer(): void
     {
         $p = Person::factory()->create();
@@ -272,6 +288,97 @@ class ExceptionReportControllerTest extends TestCase
         $report = $this->makeReport(['status' => ExceptionReportStatus::Submitted->value]);
 
         $this->putJson($this->reportUrl($report), ['title' => 'Updated'])->assertStatus(409);
+    }
+
+    public function test_update_rejects_null_title(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_update_rejects_null_trigger_type(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['trigger_type' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('trigger_type');
+    }
+
+    public function test_update_rejects_invalid_trigger_type(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['trigger_type' => 'invalid'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('trigger_type');
+    }
+
+    public function test_update_accepts_valid_trigger_type(): void
+    {
+        $report = $this->makeReport(['trigger_type' => ExceptionTriggerType::ToleranceTime->value]);
+
+        $this->putJson($this->reportUrl($report), ['trigger_type' => ExceptionTriggerType::Manual->value])
+            ->assertOk()
+            ->assertJsonPath('data.trigger_type', ExceptionTriggerType::Manual->value);
+    }
+
+    public function test_update_rejects_null_description(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['description' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('description');
+    }
+
+    public function test_update_rejects_null_cause(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['cause' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('cause');
+    }
+
+    public function test_update_rejects_null_impact(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['impact' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('impact');
+    }
+
+    public function test_update_rejects_null_recommendation(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['recommendation' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('recommendation');
+    }
+
+    public function test_update_accepts_valid_stage_id(): void
+    {
+        $report = $this->makeReport();
+        $stage  = Stage::factory()->create(['project_id' => $this->project->id, 'created_by' => $this->person->id]);
+
+        $this->putJson($this->reportUrl($report), ['stage_id' => $stage->id])
+            ->assertOk()
+            ->assertJsonPath('data.stage_id', $stage->id);
+    }
+
+    public function test_update_rejects_nonexistent_stage_id(): void
+    {
+        $report = $this->makeReport();
+
+        $this->putJson($this->reportUrl($report), ['stage_id' => 999999])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('stage_id');
     }
 
     public function test_destroy_deletes_draft_report(): void

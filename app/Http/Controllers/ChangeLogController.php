@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\ChangeStatus;
 use App\Enums\ProjectRole;
-use App\Http\Requests\ChangeLog\ChangeRequest;
+use App\Http\Requests\ChangeLog\StoreChangeRequest;
+use App\Http\Requests\ChangeLog\UpdateChangeRequest;
 use App\Http\Resources\ChangeResource;
 use App\Models\Change;
 use App\Models\Project;
@@ -36,7 +37,7 @@ class ChangeLogController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "...", "status": "proposed"}}
      */
-    public function store(ChangeRequest $request, Project $project): ChangeResource
+    public function store(StoreChangeRequest $request, Project $project): ChangeResource
     {
         $this->authorize('create', [Change::class, $project]);
 
@@ -69,7 +70,7 @@ class ChangeLogController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(ChangeRequest $request, Project $project, Change $change): ChangeResource
+    public function update(UpdateChangeRequest $request, Project $project, Change $change): ChangeResource
     {
         $this->authorize('update', [Change::class, $project, $change]);
 

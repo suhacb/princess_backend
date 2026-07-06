@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\RiskStatus;
-use App\Http\Requests\RiskLog\RiskRequest;
+use App\Http\Requests\RiskLog\StoreRiskRequest;
+use App\Http\Requests\RiskLog\UpdateRiskRequest;
 use App\Http\Resources\RiskResource;
 use App\Models\Project;
 use App\Models\Risk;
@@ -34,7 +35,7 @@ class RiskController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "...", "status": "open"}}
      */
-    public function store(RiskRequest $request, Project $project): RiskResource
+    public function store(StoreRiskRequest $request, Project $project): RiskResource
     {
         $this->authorize('create', [Risk::class, $project]);
 
@@ -66,7 +67,7 @@ class RiskController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(RiskRequest $request, Project $project, Risk $risk): RiskResource
+    public function update(UpdateRiskRequest $request, Project $project, Risk $risk): RiskResource
     {
         $this->authorize('update', [Risk::class, $project, $risk]);
 

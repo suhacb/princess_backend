@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TestSessionPlanStatus;
-use App\Http\Requests\TestSessionPlan\TestSessionPlanRequest;
+use App\Http\Requests\TestSessionPlan\StoreTestSessionPlanRequest;
+use App\Http\Requests\TestSessionPlan\UpdateTestSessionPlanRequest;
 use App\Http\Resources\TestSessionPlanResource;
 use App\Models\Project;
 use App\Models\TestSessionPlan;
@@ -50,7 +51,7 @@ class TestSessionPlanController extends Controller
      *
      * @response 201 {"data": {"id": 1, "ref": "TSP-001", "status": "draft"}}
      */
-    public function store(TestSessionPlanRequest $request, Project $project): TestSessionPlanResource
+    public function store(StoreTestSessionPlanRequest $request, Project $project): TestSessionPlanResource
     {
         $this->authorize('create', [TestSessionPlan::class, $project]);
 
@@ -90,7 +91,7 @@ class TestSessionPlanController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(TestSessionPlanRequest $request, Project $project, TestSessionPlan $testSessionPlan): TestSessionPlanResource
+    public function update(UpdateTestSessionPlanRequest $request, Project $project, TestSessionPlan $testSessionPlan): TestSessionPlanResource
     {
         $this->authorize('update', [TestSessionPlan::class, $project, $testSessionPlan]);
 

@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\LessonsLog\LessonRequest;
+use App\Http\Requests\LessonsLog\StoreLessonRequest;
+use App\Http\Requests\LessonsLog\UpdateLessonRequest;
 use App\Http\Resources\LessonResource;
 use App\Models\Lesson;
 use App\Models\Project;
@@ -33,7 +34,7 @@ class LessonController extends Controller
      *
      * @response 201 {"data": {"id": 1, "description": "..."}}
      */
-    public function store(LessonRequest $request, Project $project): LessonResource
+    public function store(StoreLessonRequest $request, Project $project): LessonResource
     {
         $this->authorize('create', [Lesson::class, $project]);
 
@@ -65,7 +66,7 @@ class LessonController extends Controller
      *
      * @response {"data": {"id": 1, "description": "Updated"}}
      */
-    public function update(LessonRequest $request, Project $project, Lesson $lesson): LessonResource
+    public function update(UpdateLessonRequest $request, Project $project, Lesson $lesson): LessonResource
     {
         $this->authorize('update', [Lesson::class, $project, $lesson]);
 

@@ -68,6 +68,35 @@ class ProjectProductDescriptionControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_requires_title(): void
+    {
+        $this->postJson($this->url(), $this->validPayload(['title' => null]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
+    }
+
+    public function test_store_creates_ppd_with_quality_fields(): void
+    {
+        $this->postJson($this->url(), $this->validPayload([
+            'quality_criteria'          => ['Passes regression suite', 'Meets SLA'],
+            'quality_responsibilities'  => [
+                'producer' => 'Dev Team',
+                'reviewer' => 'QA Lead',
+                'approver' => 'Product Owner',
+            ],
+        ]))
+            ->assertCreated()
+            ->assertJsonPath('data.quality_criteria', ['Passes regression suite', 'Meets SLA'])
+            ->assertJsonPath('data.quality_responsibilities.producer', 'Dev Team');
+    }
+
+    public function test_store_rejects_quality_criteria_not_array_of_strings(): void
+    {
+        $this->postJson($this->url(), $this->validPayload(['quality_criteria' => 'not-an-array']))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('quality_criteria');
+    }
+
     public function test_store_returns_422_on_duplicate(): void
     {
         ProjectProductDescription::factory()->create([
@@ -106,6 +135,18 @@ class ProjectProductDescriptionControllerTest extends TestCase
             'project_id' => $this->project->id,
             'updated_by' => $this->person->id,
         ]);
+    }
+
+    public function test_update_rejects_null_title(): void
+    {
+        ProjectProductDescription::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+
+        $this->putJson($this->url(), ['title' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('title');
     }
 
     public function test_destroy_deletes_ppd(): void

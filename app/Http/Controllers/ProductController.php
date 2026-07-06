@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductStatus;
-use App\Http\Requests\ProductDescription\ProductRequest;
+use App\Http\Requests\ProductDescription\StoreProductRequest;
+use App\Http\Requests\ProductDescription\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use App\Models\Project;
@@ -56,7 +57,7 @@ class ProductController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "...", "status": "draft"}}
      */
-    public function store(ProductRequest $request, Project $project): ProductResource
+    public function store(StoreProductRequest $request, Project $project): ProductResource
     {
         $this->authorize('create', [Product::class, $project]);
 
@@ -98,7 +99,7 @@ class ProductController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(ProductRequest $request, Project $project, Product $product): ProductResource
+    public function update(UpdateProductRequest $request, Project $project, Product $product): ProductResource
     {
         $this->authorize('update', [Product::class, $project, $product]);
 

@@ -2,7 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\QualityRegister\QualityRegisterRequest;
+use App\Http\Requests\QualityRegister\StoreQualityRegisterRequest;
+use App\Http\Requests\QualityRegister\UpdateQualityRegisterRequest;
 use App\Http\Resources\QualityRegisterEntryResource;
 use App\Models\Project;
 use App\Models\QualityRegisterEntry;
@@ -33,7 +34,7 @@ class QualityRegisterController extends Controller
      *
      * @response 201 {"data": {"id": 1, "product_name": "..."}}
      */
-    public function store(QualityRegisterRequest $request, Project $project): QualityRegisterEntryResource
+    public function store(StoreQualityRegisterRequest $request, Project $project): QualityRegisterEntryResource
     {
         $this->authorize('create', [QualityRegisterEntry::class, $project]);
 
@@ -59,7 +60,7 @@ class QualityRegisterController extends Controller
      *
      * @response {"data": {"id": 1, "product_name": "Updated"}}
      */
-    public function update(QualityRegisterRequest $request, Project $project, QualityRegisterEntry $qualityRegisterEntry): QualityRegisterEntryResource
+    public function update(UpdateQualityRegisterRequest $request, Project $project, QualityRegisterEntry $qualityRegisterEntry): QualityRegisterEntryResource
     {
         $this->authorize('update', [QualityRegisterEntry::class, $project, $qualityRegisterEntry]);
 

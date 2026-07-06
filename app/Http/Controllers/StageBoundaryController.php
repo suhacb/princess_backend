@@ -3,7 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BoundaryStatus;
-use App\Http\Requests\StageBoundary\StageBoundaryRequest;
+use App\Http\Requests\StageBoundary\StoreStageBoundaryRequest;
+use App\Http\Requests\StageBoundary\UpdateStageBoundaryRequest;
 use App\Http\Resources\StageBoundaryResource;
 use App\Models\Project;
 use App\Models\Stage;
@@ -37,7 +38,7 @@ class StageBoundaryController extends Controller
      * @response 201 {"data": {"id": 1, "type": "end_stage_report", "status": "draft"}}
      * @response 422 {"message": "The type field is required."}
      */
-    public function store(StageBoundaryRequest $request, Project $project, Stage $stage): StageBoundaryResource
+    public function store(StoreStageBoundaryRequest $request, Project $project, Stage $stage): StageBoundaryResource
     {
         $this->authorize('create', [StageBoundary::class, $project]);
 
@@ -71,7 +72,7 @@ class StageBoundaryController extends Controller
      * @response 404 {"message": "Not found."}
      * @response 409 {"error": "Only draft boundaries can be edited."}
      */
-    public function update(StageBoundaryRequest $request, Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
+    public function update(UpdateStageBoundaryRequest $request, Project $project, Stage $stage, StageBoundary $boundary): StageBoundaryResource
     {
         $this->authorize('update', [StageBoundary::class, $project, $stage, $boundary]);
 

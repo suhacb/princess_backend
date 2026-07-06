@@ -4,7 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\TaskPriority;
 use App\Enums\TaskStatus;
-use App\Http\Requests\Task\TaskRequest;
+use App\Http\Requests\Task\StoreTaskRequest;
+use App\Http\Requests\Task\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
@@ -63,7 +64,7 @@ class TaskController extends Controller
      *
      * @response 201 {"data": {"id": 1, "title": "...", "status": "todo"}}
      */
-    public function store(TaskRequest $request, Project $project): TaskResource
+    public function store(StoreTaskRequest $request, Project $project): TaskResource
     {
         $this->authorize('create', [Task::class, $project]);
 
@@ -103,7 +104,7 @@ class TaskController extends Controller
      *
      * @response {"data": {"id": 1, "title": "Updated"}}
      */
-    public function update(TaskRequest $request, Project $project, Task $task): TaskResource
+    public function update(UpdateTaskRequest $request, Project $project, Task $task): TaskResource
     {
         $this->authorize('update', [Task::class, $project, $task]);
 
