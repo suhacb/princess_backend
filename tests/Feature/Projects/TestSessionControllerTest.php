@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Projects;
 
+use App\Enums\AcceptanceCriterionDecision;
 use App\Enums\AcceptanceCriterionStatus;
 use App\Enums\ProjectRole;
 use App\Enums\TeamType;
@@ -413,8 +414,11 @@ class TestSessionControllerTest extends TestCase
         $this->assertNull($ac->fresh()->accepted_at);
     }
 
-    public function test_complete_sets_accepted_at_when_both_sides_pass(): void
+    public function test_complete_does_not_auto_accept_when_both_sides_pass(): void
     {
+        // Final acceptance is a human decision (AcceptanceCriterionController::supplierDecision/
+        // clientDecision) — a test session completing, even with both sides passing, must never
+        // set accepted_at on its own.
         $requirement = Requirement::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->person->id,
@@ -450,20 +454,25 @@ class TestSessionControllerTest extends TestCase
         $freshAc = $ac->fresh();
         $this->assertTrue($freshAc->supplier_passed);
         $this->assertTrue($freshAc->client_passed);
-        $this->assertNotNull($freshAc->accepted_at);
+        $this->assertNull($freshAc->accepted_at);
     }
 
-    public function test_complete_clears_accepted_at_when_fail_result(): void
+    public function test_complete_does_not_clear_a_prior_human_acceptance_on_fail_result(): void
     {
+        // Once a human has accepted both sides, a later test regression updates the computed
+        // supplier_passed/client_passed signal but must not silently revoke that sign-off —
+        // only a human decision can do that (see AcceptanceCriterionControllerTest).
         $requirement = Requirement::factory()->create([
             'project_id' => $this->project->id,
             'created_by' => $this->person->id,
         ]);
         $ac = $this->makeAc($requirement);
         $ac->update([
-            'supplier_passed' => true,
-            'client_passed'   => true,
-            'accepted_at'     => now()->subDay(),
+            'supplier_passed'   => true,
+            'client_passed'     => true,
+            'supplier_decision' => AcceptanceCriterionDecision::Accepted->value,
+            'client_decision'   => AcceptanceCriterionDecision::Accepted->value,
+            'accepted_at'       => now()->subDay(),
         ]);
 
         $scenario = $this->makeTestableScenario();
@@ -483,7 +492,36 @@ class TestSessionControllerTest extends TestCase
 
         $freshAc = $ac->fresh();
         $this->assertFalse($freshAc->supplier_passed);
-        $this->assertNull($freshAc->accepted_at);
+        $this->assertNotNull($freshAc->accepted_at);
+    }
+
+    public function test_complete_creates_version_snapshot_when_computed_signal_changes(): void
+    {
+        $requirement = Requirement::factory()->create([
+            'project_id' => $this->project->id,
+            'created_by' => $this->person->id,
+        ]);
+        $ac       = $this->makeAc($requirement);
+        $scenario = $this->makeTestableScenario();
+        $scenario->acceptanceCriteria()->attach($ac->id);
+
+        $session = $this->makeSession([
+            'status'    => TestSessionStatus::InProgress->value,
+            'team_type' => TeamType::Supplier->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+
+        $this->postJson($this->sessionUrl($session) . '/complete')->assertOk();
+
+        $this->assertDatabaseHas('acceptance_criterion_versions', [
+            'acceptance_criterion_id' => $ac->id,
+            'version_number'          => 2,
+            'supplier_passed'         => true,
+        ]);
     }
 
     public function test_complete_creates_issue_for_fail_result(): void

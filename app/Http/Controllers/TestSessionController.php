@@ -187,7 +187,7 @@ class TestSessionController extends Controller
                 'updated_by' => auth()->user()->person_id,
             ]);
 
-            $testSession->recomputeAcStatus();
+            $testSession->recomputeAcStatus(auth()->user()->person_id);
             $testSession->createIssuesForFailures();
         });
 

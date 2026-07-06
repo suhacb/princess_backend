@@ -45,6 +45,13 @@ class AcceptanceCriterionPolicy
             && $this->isApprover($user, $project);
     }
 
+    /** Supplier and client sign-off decisions share the same approver set as approve(). */
+    public function decide(User $user, Project $project, AcceptanceCriterion $criterion): bool
+    {
+        return $criterion->project_id === $project->id
+            && $this->isApprover($user, $project);
+    }
+
     private function isApprover(User $user, Project $project): bool
     {
         $member = $this->getMember($user, $project);
