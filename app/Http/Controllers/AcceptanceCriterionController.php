@@ -170,7 +170,12 @@ class AcceptanceCriterionController extends Controller
     {
         $this->authorize('decide', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
 
-        $decision = $this->validateDecision($request, $acceptanceCriterion->supplier_passed);
+        $validated = $request->validate([
+            'decision' => ['required', Rule::enum(AcceptanceCriterionDecision::class)],
+            'note'     => ['nullable', 'string'],
+        ]);
+
+        $decision = $this->resolveDecision($validated, $acceptanceCriterion->supplier_passed);
 
         $acceptanceCriterion->applyVersionedChange([
             'supplier_decision'      => $decision['decision']->value,
@@ -194,7 +199,12 @@ class AcceptanceCriterionController extends Controller
     {
         $this->authorize('decide', [AcceptanceCriterion::class, $project, $acceptanceCriterion]);
 
-        $decision = $this->validateDecision($request, $acceptanceCriterion->client_passed);
+        $validated = $request->validate([
+            'decision' => ['required', Rule::enum(AcceptanceCriterionDecision::class)],
+            'note'     => ['nullable', 'string'],
+        ]);
+
+        $decision = $this->resolveDecision($validated, $acceptanceCriterion->client_passed);
 
         $acceptanceCriterion->applyVersionedChange([
             'client_decision'      => $decision['decision']->value,
@@ -208,15 +218,16 @@ class AcceptanceCriterionController extends Controller
     }
 
     /**
+     * Shared contradiction-check logic for both decision endpoints. Does not itself call
+     * $request->validate() — that stays inline in each action method so Scramble's static
+     * analysis (which only looks at the route method body, not delegated helpers) can
+     * still infer the request body schema for the generated API docs.
+     *
+     * @param  array{decision: string, note: ?string}  $validated
      * @return array{decision: AcceptanceCriterionDecision, note: ?string}
      */
-    private function validateDecision(Request $request, bool $computedPassed): array
+    private function resolveDecision(array $validated, bool $computedPassed): array
     {
-        $validated = $request->validate([
-            'decision' => ['required', Rule::enum(AcceptanceCriterionDecision::class)],
-            'note'     => ['nullable', 'string'],
-        ]);
-
         $decision = AcceptanceCriterionDecision::from($validated['decision']);
 
         abort_if($decision === AcceptanceCriterionDecision::Pending, 422, 'Decision must be accepted or rejected.');
