@@ -18,13 +18,15 @@ class LlmRouterService
     public function __construct(
         private readonly array $providers,
         private readonly array $tiers,
+        private readonly string $defaultTier,
     ) {}
 
     /**
      * @param array<int, array{role: string, content: string}> $messages
      */
-    public function chat(string $tier, array $messages, array $options = [], ?string $caller = null): LlmResponse
+    public function chat(?string $tier, array $messages, array $options = [], ?string $caller = null): LlmResponse
     {
+        $tier ??= $this->defaultTier;
         $chain = $this->tiers[$tier] ?? null;
 
         if ($chain === null) {
@@ -56,7 +58,7 @@ class LlmRouterService
         throw new RuntimeException("All providers failed for LLM tier [{$tier}].", previous: $lastException);
     }
 
-    public function generate(string $tier, string $prompt, array $options = [], ?string $caller = null): LlmResponse
+    public function generate(?string $tier, string $prompt, array $options = [], ?string $caller = null): LlmResponse
     {
         return $this->chat($tier, [['role' => 'user', 'content' => $prompt]], $options, $caller);
     }

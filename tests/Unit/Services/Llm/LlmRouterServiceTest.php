@@ -64,6 +64,7 @@ class LlmRouterServiceTest extends TestCase
                 'together' => $this->fakeProvider(null, new RuntimeException('should not be called')),
             ],
             tiers: $this->tiers(),
+            defaultTier: 'fast',
         );
 
         $result = $router->chat('fast', [['role' => 'user', 'content' => 'hi']], caller: 'test-caller');
@@ -88,6 +89,7 @@ class LlmRouterServiceTest extends TestCase
                 'together' => $this->fakeProvider($fallbackResponse),
             ],
             tiers: $this->tiers(),
+            defaultTier: 'fast',
         );
 
         $result = $router->chat('fast', [['role' => 'user', 'content' => 'hi']]);
@@ -105,6 +107,7 @@ class LlmRouterServiceTest extends TestCase
                 'together' => $this->fakeProvider(null, new RuntimeException('together down')),
             ],
             tiers: $this->tiers(),
+            defaultTier: 'fast',
         );
 
         $this->expectException(RuntimeException::class);
@@ -114,11 +117,50 @@ class LlmRouterServiceTest extends TestCase
 
     public function test_chat_throws_for_unknown_tier(): void
     {
-        $router = new LlmRouterService(providers: [], tiers: $this->tiers());
+        $router = new LlmRouterService(providers: [], tiers: $this->tiers(), defaultTier: 'fast');
 
         $this->expectException(InvalidArgumentException::class);
 
         $router->chat('reasoning', [['role' => 'user', 'content' => 'hi']]);
+    }
+
+    public function test_chat_skips_tier_entry_whose_provider_is_not_registered(): void
+    {
+        $response = new LlmResponse(content: 'from together', provider: 'together', model: 'meta-llama/Llama-3.3-70B-Instruct-Turbo', latencyMs: 8);
+
+        $tiers = [
+            'fast' => [
+                ['provider' => 'unregistered', 'model' => 'ghost-model'],
+                ['provider' => 'together', 'model' => 'meta-llama/Llama-3.3-70B-Instruct-Turbo'],
+            ],
+        ];
+
+        $router = new LlmRouterService(
+            providers: ['together' => $this->fakeProvider($response)],
+            tiers: $tiers,
+            defaultTier: 'fast',
+        );
+
+        $result = $router->chat('fast', [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertSame('from together', $result->content);
+        $this->assertDatabaseMissing('llm_usage_logs', ['provider' => 'unregistered']);
+    }
+
+    public function test_chat_falls_back_to_default_tier_when_none_given(): void
+    {
+        $response = new LlmResponse(content: 'ok', provider: 'ollama', model: 'gemma4:e4b', latencyMs: 5);
+
+        $router = new LlmRouterService(
+            providers: ['ollama' => $this->fakeProvider($response)],
+            tiers: $this->tiers(),
+            defaultTier: 'fast',
+        );
+
+        $result = $router->chat(null, [['role' => 'user', 'content' => 'hi']]);
+
+        $this->assertSame('ok', $result->content);
+        $this->assertDatabaseHas('llm_usage_logs', ['tier' => 'fast']);
     }
 
     public function test_generate_wraps_prompt_and_delegates_to_chat(): void
@@ -128,6 +170,7 @@ class LlmRouterServiceTest extends TestCase
         $router = new LlmRouterService(
             providers: ['ollama' => $this->fakeProvider($response)],
             tiers: $this->tiers(),
+            defaultTier: 'fast',
         );
 
         $result = $router->generate('fast', 'hi there');

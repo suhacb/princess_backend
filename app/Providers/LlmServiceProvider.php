@@ -35,6 +35,7 @@ class LlmServiceProvider extends ServiceProvider
                     'together' => $app->make(TogetherAiClient::class),
                 ],
                 tiers: config('princess.llm.tiers'),
+                defaultTier: config('princess.llm.default_tier'),
             );
         });
     }
