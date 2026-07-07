@@ -53,7 +53,11 @@ return [
             ],
             'smart' => [
                 ['provider' => 'ollama', 'model' => env('OLLAMA_MODEL_SMART', 'gemma4:26b')],
-                ['provider' => 'together', 'model' => env('TOGETHER_MODEL_SMART', 'deepseek-ai/DeepSeek-V3')],
+                ['provider' => 'together', 'model' => env('TOGETHER_MODEL_SMART', 'deepseek-ai/DeepSeek-V3.1')],
+            ],
+            'reasoning' => [
+                ['provider' => 'ollama', 'model' => env('OLLAMA_MODEL_REASONING', 'deepseek-r1:14b')],
+                ['provider' => 'together', 'model' => env('TOGETHER_MODEL_REASONING', 'deepseek-ai/DeepSeek-R1-0528')],
             ],
         ],
     ],
