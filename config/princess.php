@@ -34,14 +34,14 @@ return [
     'ollama' => [
         'base_url' => env('OLLAMA_BASE_URL'),
         'model'    => env('OLLAMA_MODEL', 'gemma4:e4b'),
-        'timeout'  => (int) env('OLLAMA_TIMEOUT', 300),
+        'timeout'  => (int) env('OLLAMA_TIMEOUT', 600),
     ],
 
     'together' => [
         'base_url' => env('TOGETHER_BASE_URL', 'https://api.together.xyz'),
         'api_key'  => env('TOGETHER_API_KEY', ''),
         'model'    => env('TOGETHER_MODEL', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'),
-        'timeout'  => (int) env('TOGETHER_TIMEOUT', 120),
+        'timeout'  => (int) env('TOGETHER_TIMEOUT', 600),
     ],
 
     'llm' => [
