@@ -13,10 +13,10 @@ class UpdateStageRequest extends FormRequest
     {
         return [
             'name'              => ['sometimes', 'required', 'string', 'max:255'],
-            'type'              => ['nullable', Rule::enum(StageType::class)],
-            'sequence'          => ['nullable', 'integer', 'min:0'],
+            'type'              => ['sometimes', 'required', Rule::enum(StageType::class)],
+            'sequence'          => ['integer', 'min:0'],
             'description'       => ['nullable', 'string'],
-            'status'            => ['nullable', Rule::enum(StageStatus::class)],
+            'status'            => [Rule::enum(StageStatus::class)],
             'planned_start'     => ['nullable', 'date'],
             'planned_end'       => ['nullable', 'date', 'after_or_equal:planned_start'],
             'actual_start'      => ['nullable', 'date'],
@@ -27,7 +27,7 @@ class UpdateStageRequest extends FormRequest
             'tolerance_risk'    => ['nullable', 'string', 'max:255'],
             'tolerance_quality' => ['nullable', 'string', 'max:255'],
             'tolerance_benefit' => ['nullable', 'string', 'max:255'],
-            'version'           => ['nullable', 'integer', 'min:1'],
+            'version'           => ['integer', 'min:1'],
         ];
     }
 }
