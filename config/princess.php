@@ -32,11 +32,30 @@ return [
     ],
 
     'ollama' => [
-        'base_url'     => env('OLLAMA_BASE_URL'),
-        'model'        => env('OLLAMA_MODEL', 'gemma4:e4b'),
-        'model_fast'   => env('OLLAMA_MODEL_FAST', 'gemma4:e4b'),
-        'model_smart'  => env('OLLAMA_MODEL_SMART', 'gemma4:26b'),
-        'timeout'      => (int) env('OLLAMA_TIMEOUT', 300),
+        'base_url' => env('OLLAMA_BASE_URL'),
+        'model'    => env('OLLAMA_MODEL', 'gemma4:e4b'),
+        'timeout'  => (int) env('OLLAMA_TIMEOUT', 300),
+    ],
+
+    'together' => [
+        'base_url' => env('TOGETHER_BASE_URL', 'https://api.together.xyz'),
+        'api_key'  => env('TOGETHER_API_KEY', ''),
+        'model'    => env('TOGETHER_MODEL', 'meta-llama/Llama-3.3-70B-Instruct-Turbo'),
+        'timeout'  => (int) env('TOGETHER_TIMEOUT', 120),
+    ],
+
+    'llm' => [
+        'default_tier' => env('LLM_DEFAULT_TIER', 'fast'),
+        'tiers'        => [
+            'fast' => [
+                ['provider' => 'ollama', 'model' => env('OLLAMA_MODEL_FAST', 'gemma4:e4b')],
+                ['provider' => 'together', 'model' => env('TOGETHER_MODEL_FAST', 'meta-llama/Llama-3.3-70B-Instruct-Turbo')],
+            ],
+            'smart' => [
+                ['provider' => 'ollama', 'model' => env('OLLAMA_MODEL_SMART', 'gemma4:26b')],
+                ['provider' => 'together', 'model' => env('TOGETHER_MODEL_SMART', 'deepseek-ai/DeepSeek-V3')],
+            ],
+        ],
     ],
 
     'm365' => [

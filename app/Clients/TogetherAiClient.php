@@ -8,10 +8,11 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
-class OllamaClient implements LlmClientContract
+class TogetherAiClient implements LlmClientContract
 {
     public function __construct(
         private readonly string $baseUrl,
+        private readonly string $apiKey,
         private readonly string $model,
         private readonly int    $timeout,
     ) {}
@@ -20,7 +21,8 @@ class OllamaClient implements LlmClientContract
     {
         try {
             return Http::timeout(5)
-                ->get("{$this->baseUrl}/api/tags")
+                ->withToken($this->apiKey)
+                ->get("{$this->baseUrl}/v1/models")
                 ->successful();
         } catch (ConnectionException) {
             return false;
@@ -34,30 +36,28 @@ class OllamaClient implements LlmClientContract
 
         try {
             $response = Http::timeout($this->timeout)
-                ->post("{$this->baseUrl}/api/chat", [
+                ->withToken($this->apiKey)
+                ->post("{$this->baseUrl}/v1/chat/completions", [
                     'model'    => $model,
                     'messages' => $messages,
-                    'stream'   => false,
                 ]);
         } catch (ConnectionException $e) {
-            throw new RuntimeException("Ollama chat request failed: {$e->getMessage()}", previous: $e);
+            throw new RuntimeException("Together AI chat request failed: {$e->getMessage()}", previous: $e);
         }
 
         if (! $response->successful()) {
-            throw new RuntimeException("Ollama chat request returned status {$response->status()}.");
+            throw new RuntimeException("Together AI chat request returned status {$response->status()}.");
         }
 
         $data = $response->json();
 
         return new LlmResponse(
-            content:           $data['message']['content'] ?? '',
-            provider:          'ollama',
+            content:           $data['choices'][0]['message']['content'] ?? '',
+            provider:          'together',
             model:             $model,
-            promptTokens:      $data['prompt_eval_count'] ?? null,
-            completionTokens:  $data['eval_count'] ?? null,
-            totalTokens:       isset($data['prompt_eval_count'], $data['eval_count'])
-                ? $data['prompt_eval_count'] + $data['eval_count']
-                : null,
+            promptTokens:      $data['usage']['prompt_tokens'] ?? null,
+            completionTokens:  $data['usage']['completion_tokens'] ?? null,
+            totalTokens:       $data['usage']['total_tokens'] ?? null,
             latencyMs:         (int) round((microtime(true) - $start) * 1000),
         );
     }

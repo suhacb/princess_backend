@@ -2,10 +2,11 @@
 
 namespace App\Console\Commands;
 
+use App\Clients\OllamaClient;
+use App\Clients\TogetherAiClient;
 use App\Contracts\AuthGatewayClientContract;
 use App\Contracts\GarageAdminClientContract;
 use App\Contracts\GraphClientContract;
-use App\Contracts\OllamaClientContract;
 use App\Contracts\QdrantClientContract;
 use App\Contracts\ZincSearchClientContract;
 use Illuminate\Console\Command;
@@ -29,7 +30,8 @@ class HealthCheckCommand extends Command
             'Auth Backend' => fn () => app(AuthGatewayClientContract::class)->ping(),
             'ZincSearch'   => fn () => app(ZincSearchClientContract::class)->ping(),
             'Qdrant'       => fn () => app(QdrantClientContract::class)->ping(),
-            'Ollama'       => fn () => app(OllamaClientContract::class)->ping(),
+            'Ollama'       => fn () => app(OllamaClient::class)->ping(),
+            'Together AI'  => fn () => app(TogetherAiClient::class)->ping(),
             'M365 Graph'   => fn () => app(GraphClientContract::class)->ping(),
             'Garage S3'    => fn () => app(GarageAdminClientContract::class)->ping(),
         ];
