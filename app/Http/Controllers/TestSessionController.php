@@ -8,9 +8,11 @@ use App\Enums\TestSessionStatus;
 use App\Http\Requests\TestSession\StoreTestSessionRequest;
 use App\Http\Requests\TestSession\UpdateTestSessionRequest;
 use App\Http\Requests\TestSession\UpdateResultTestSessionRequest;
+use App\Http\Requests\TestSession\UpdateTestCaseResultTestSessionRequest;
 use App\Http\Resources\TestSessionResource;
 use App\Http\Resources\TestSessionResultResource;
 use App\Models\Project;
+use App\Models\TestCase;
 use App\Models\TestScenario;
 use App\Models\TestSession;
 use App\Models\TestSessionResult;
@@ -78,7 +80,7 @@ class TestSessionController extends Controller
             'created_by' => auth()->user()->person_id,
         ]));
 
-        // Pre-populate results for plan scenarios
+        // Pre-populate results for plan scenarios, and one per test case within each scenario
         if ($planId) {
             $plan = $project->testSessionPlans()->find($planId);
             foreach ($plan->scenarios()->orderByPivot('order')->get() as $scenario) {
@@ -87,10 +89,19 @@ class TestSessionController extends Controller
                     'test_scenario_id' => $scenario->id,
                     'result'           => TestResultStatus::NotRun->value,
                 ]);
+
+                foreach ($scenario->testCases as $testCase) {
+                    TestSessionResult::create([
+                        'test_session_id'  => $session->id,
+                        'test_scenario_id' => $scenario->id,
+                        'test_case_id'     => $testCase->id,
+                        'result'           => TestResultStatus::NotRun->value,
+                    ]);
+                }
             }
         }
 
-        return new TestSessionResource($session->load(['results.testScenario', 'tester']));
+        return new TestSessionResource($session->load(['results.testScenario', 'results.testCase', 'tester']));
     }
 
     /**
@@ -103,7 +114,7 @@ class TestSessionController extends Controller
         $this->authorize('view', [TestSession::class, $project, $testSession]);
 
         return new TestSessionResource(
-            $testSession->load(['results.testScenario', 'tester', 'plan'])
+            $testSession->load(['results.testScenario', 'results.testCase', 'tester', 'plan'])
         );
     }
 
@@ -126,7 +137,7 @@ class TestSessionController extends Controller
             'updated_by' => auth()->user()->person_id,
         ]));
 
-        return new TestSessionResource($testSession->fresh()->load(['results.testScenario', 'tester']));
+        return new TestSessionResource($testSession->fresh()->load(['results.testScenario', 'results.testCase', 'tester']));
     }
 
     /**
@@ -193,7 +204,7 @@ class TestSessionController extends Controller
             $testSession->createIssuesForFailures();
         });
 
-        return new TestSessionResource($testSession->fresh()->load(['results.testScenario']));
+        return new TestSessionResource($testSession->fresh()->load(['results.testScenario', 'results.testCase']));
     }
 
     /**
@@ -230,9 +241,19 @@ class TestSessionController extends Controller
     {
         $this->authorize('updateResult', [TestSession::class, $project, $testSession]);
 
-        $result = $testSession->results()->where('test_scenario_id', $testScenario->id)->first();
+        $result = $testSession->results()
+            ->where('test_scenario_id', $testScenario->id)
+            ->whereNull('test_case_id')
+            ->first();
 
         abort_if(! $result, 422, 'This scenario is not part of the session.');
+
+        $hasCaseResults = $testSession->results()
+            ->where('test_scenario_id', $testScenario->id)
+            ->whereNotNull('test_case_id')
+            ->exists();
+
+        abort_if($hasCaseResults, 422, 'This scenario has per-test-case results; update via the test case results endpoint.');
 
         $validated = $request->validated();
 
@@ -244,6 +265,55 @@ class TestSessionController extends Controller
     }
 
     /**
+     * Record or update the result for a single test case within a session's scenario.
+     * Rolls up into the scenario's aggregate result.
+     *
+     * @response {"data": {"result": "pass", "step_results": [{"step_index": 0, "result": "pass"}]}}
+     * @response 422 {"message": "This test case is not part of the session."}
+     */
+    public function updateTestCaseResult(
+        UpdateTestCaseResultTestSessionRequest $request,
+        Project $project,
+        TestSession $testSession,
+        TestScenario $testScenario,
+        TestCase $testCase
+    ): TestSessionResultResource {
+        $this->authorize('updateResult', [TestSession::class, $project, $testSession]);
+
+        $result = $testSession->results()
+            ->where('test_scenario_id', $testScenario->id)
+            ->where('test_case_id', $testCase->id)
+            ->first();
+
+        abort_if(! $result, 422, 'This test case is not part of the session.');
+
+        $validated   = $request->validated();
+        $stepResults = $validated['step_results'] ?? null;
+
+        if ($stepResults) {
+            $maxStepIndex = count($testCase->steps) - 1;
+            $outOfRange   = collect($stepResults)->contains(fn ($step) => $step['step_index'] > $maxStepIndex);
+            abort_if($outOfRange, 422, 'step_index is out of range for this test case.');
+
+            $derivedResult = TestSessionResult::worstOf(collect($stepResults)->pluck('result'));
+        } else {
+            $derivedResult = TestResultStatus::from($validated['result']);
+        }
+
+        $result->update([
+            'result'       => $derivedResult->value,
+            'step_results' => $stepResults,
+            'notes'        => $validated['notes'] ?? $result->notes,
+            'defect_ref'   => $validated['defect_ref'] ?? $result->defect_ref,
+            'executed_at'  => now(),
+        ]);
+
+        $testSession->recomputeScenarioResult($testScenario->id);
+
+        return new TestSessionResultResource($result->fresh()->load(['testScenario', 'testCase']));
+    }
+
+    /**
      * Export a test session report with pass/fail summary and per-scenario results.
      *
      * @response {"data": {"ref": "TS-001", "summary": {"pass": 10, "fail": 2, "blocked": 1, "not_run": 0, "skipped": 0}, "results": []}}
@@ -252,7 +322,11 @@ class TestSessionController extends Controller
     {
         $this->authorize('view', [TestSession::class, $project, $testSession]);
 
-        $testSession->load(['results.testScenario', 'tester', 'plan']);
+        $testSession->load([
+            'results' => fn ($query) => $query->whereNull('test_case_id')->with('testScenario'),
+            'tester',
+            'plan',
+        ]);
 
         $counts = [
             'pass'    => $testSession->results->where('result.value', 'pass')->count(),

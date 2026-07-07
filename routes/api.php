@@ -210,6 +210,9 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
     Route::put('projects/{project}/test-sessions/{testSession}/results/{testScenario}', [TestSessionController::class, 'updateResult'])
         ->name('projects.test-sessions.results.update')
         ->withoutScopedBindings();
+    Route::put('projects/{project}/test-sessions/{testSession}/results/{testScenario}/test-cases/{testCase}', [TestSessionController::class, 'updateTestCaseResult'])
+        ->name('projects.test-sessions.results.test-cases.update')
+        ->withoutScopedBindings();
     Route::get('projects/{project}/test-sessions/{testSession}/report', [TestSessionController::class, 'report'])
         ->name('projects.test-sessions.report');
 

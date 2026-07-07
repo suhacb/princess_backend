@@ -75,6 +75,7 @@ class TestScenario extends Model
         return \Illuminate\Support\Facades\DB::table('test_session_results')
             ->join('test_sessions', 'test_session_results.test_session_id', '=', 'test_sessions.id')
             ->where('test_session_results.test_scenario_id', $this->id)
+            ->whereNull('test_session_results.test_case_id')
             ->where('test_sessions.team_type', $teamType)
             ->where('test_sessions.status', TestSessionStatus::Completed->value)
             ->orderByDesc('test_sessions.session_date')

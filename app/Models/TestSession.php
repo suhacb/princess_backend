@@ -86,9 +86,34 @@ class TestSession extends Model
      * fields — final acceptance is a human call (AcceptanceCriterion::decide*
      * actions), not something a test result can set or revoke on its own.
      */
+    /**
+     * Rolls the given scenario's aggregate result (test_case_id IS NULL) up from
+     * the worst of its sibling test-case-level results. A no-op when the scenario
+     * has no per-test-case rows, leaving the aggregate independently settable.
+     */
+    public function recomputeScenarioResult(int $testScenarioId): void
+    {
+        $caseResults = $this->results()
+            ->where('test_scenario_id', $testScenarioId)
+            ->whereNotNull('test_case_id')
+            ->pluck('result');
+
+        if ($caseResults->isEmpty()) {
+            return;
+        }
+
+        $derived = TestSessionResult::worstOf($caseResults);
+
+        $this->results()
+            ->where('test_scenario_id', $testScenarioId)
+            ->whereNull('test_case_id')
+            ->update(['result' => $derived->value, 'executed_at' => now()]);
+    }
+
     public function recomputeAcStatus(int $actingPersonId): void
     {
         $affectedAcIds = $this->results()
+            ->whereNull('test_case_id')
             ->with('testScenario.acceptanceCriteria')
             ->get()
             ->flatMap(fn ($r) => $r->testScenario->acceptanceCriteria)
@@ -115,6 +140,7 @@ class TestSession extends Model
     public function createIssuesForFailures(): void
     {
         $failResults = $this->results()
+            ->whereNull('test_case_id')
             ->with('testScenario')
             ->where('result', TestResultStatus::Fail->value)
             ->get();
