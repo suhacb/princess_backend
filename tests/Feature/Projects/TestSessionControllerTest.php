@@ -14,6 +14,7 @@ use App\Models\AcceptanceCriterion;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\Requirement;
+use App\Models\TestCase as TestCaseModel;
 use App\Models\TestScenario;
 use App\Models\TestSession;
 use App\Models\TestSessionPlan;
@@ -73,6 +74,16 @@ class TestSessionControllerTest extends TestCase
             'project_id' => $this->project->id,
             'created_by' => $this->person->id,
             'status'     => TestScenarioStatus::Ready->value,
+        ], $attrs));
+    }
+
+    private function makeTestCase(TestScenario $scenario, array $attrs = []): TestCaseModel
+    {
+        return TestCaseModel::factory()->create(array_merge([
+            'test_scenario_id' => $scenario->id,
+            'project_id'       => $this->project->id,
+            'created_by'       => $this->person->id,
+            'steps'            => ['Step one', 'Step two'],
         ], $attrs));
     }
 
@@ -160,6 +171,8 @@ class TestSessionControllerTest extends TestCase
         ]);
         $s1 = $this->makeTestableScenario();
         $s2 = $this->makeTestableScenario();
+        $this->makeTestCase($s1);
+        $this->makeTestCase($s1);
         $plan->scenarios()->attach([$s1->id => ['order' => 0], $s2->id => ['order' => 1]]);
 
         $this->postJson($this->indexUrl(), $this->storePayload([
@@ -167,7 +180,9 @@ class TestSessionControllerTest extends TestCase
         ]))->assertCreated();
 
         $session = TestSession::first();
-        $this->assertCount(2, $session->results);
+        // 2 scenario-aggregate rows + 2 test-case rows for s1's two test cases.
+        $this->assertCount(4, $session->results);
+        $this->assertCount(2, $session->results->where('test_scenario_id', $s1->id)->whereNotNull('test_case_id'));
         $this->assertTrue($session->results->every(
             fn ($r) => $r->result->value === TestResultStatus::NotRun->value
         ));
@@ -587,6 +602,135 @@ class TestSessionControllerTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // update test case result
+    // -------------------------------------------------------------------------
+
+    private function testCaseResultUrl(TestSession $session, TestScenario $scenario, TestCaseModel $testCase): string
+    {
+        return "/api/projects/{$this->project->id}/test-sessions/{$session->id}"
+            . "/results/{$scenario->id}/test-cases/{$testCase->id}";
+    }
+
+    public function test_update_test_case_result_records_pass_from_steps(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        $testCase = $this->makeTestCase($scenario, ['steps' => ['Step one', 'Step two']]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson($this->testCaseResultUrl($session, $scenario, $testCase), [
+            'step_results' => [
+                ['step_index' => 0, 'result' => 'pass'],
+                ['step_index' => 1, 'result' => 'pass'],
+            ],
+        ])->assertOk()->assertJsonPath('data.result', TestResultStatus::Pass->value);
+
+        $this->assertSame(
+            TestResultStatus::Pass->value,
+            TestSessionResult::where('test_session_id', $session->id)
+                ->where('test_scenario_id', $scenario->id)
+                ->whereNull('test_case_id')
+                ->first()->result->value
+        );
+    }
+
+    public function test_update_test_case_result_rolls_up_worst_step_to_scenario(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        $testCase = $this->makeTestCase($scenario, ['steps' => ['Step one', 'Step two']]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson($this->testCaseResultUrl($session, $scenario, $testCase), [
+            'step_results' => [
+                ['step_index' => 0, 'result' => 'pass'],
+                ['step_index' => 1, 'result' => 'fail', 'actual_result' => 'button missing'],
+            ],
+        ])->assertOk()->assertJsonPath('data.result', TestResultStatus::Fail->value);
+
+        $this->assertSame(
+            TestResultStatus::Fail->value,
+            TestSessionResult::where('test_session_id', $session->id)
+                ->where('test_scenario_id', $scenario->id)
+                ->whereNull('test_case_id')
+                ->first()->result->value
+        );
+    }
+
+    public function test_update_test_case_result_rejects_step_index_out_of_range(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        $testCase = $this->makeTestCase($scenario, ['steps' => ['Step one']]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson($this->testCaseResultUrl($session, $scenario, $testCase), [
+            'step_results' => [
+                ['step_index' => 5, 'result' => 'pass'],
+            ],
+        ])->assertUnprocessable();
+    }
+
+    public function test_update_test_case_result_rejects_test_case_not_in_session(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        $testCase = $this->makeTestCase($scenario);
+
+        $this->putJson($this->testCaseResultUrl($session, $scenario, $testCase), [
+            'result' => 'pass',
+        ])->assertUnprocessable();
+    }
+
+    public function test_update_result_rejects_when_scenario_has_case_results(): void
+    {
+        $session  = $this->makeSession();
+        $scenario = $this->makeTestableScenario();
+        $testCase = $this->makeTestCase($scenario);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::NotRun->value,
+        ]);
+
+        $this->putJson(
+            "/api/projects/{$this->project->id}/test-sessions/{$session->id}/results/{$scenario->id}",
+            ['result' => 'pass']
+        )->assertUnprocessable();
+    }
+
+    // -------------------------------------------------------------------------
     // AC recomputation on complete
     // -------------------------------------------------------------------------
 
@@ -749,6 +893,30 @@ class TestSessionControllerTest extends TestCase
         ]);
     }
 
+    public function test_complete_creates_one_issue_per_scenario_not_per_failing_test_case(): void
+    {
+        $scenario = $this->makeTestableScenario(['title' => 'Login test']);
+        $testCase = $this->makeTestCase($scenario);
+        $session  = $this->makeSession(['status' => TestSessionStatus::InProgress->value]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::Fail->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::Fail->value,
+        ]);
+
+        $this->postJson($this->sessionUrl($session) . '/complete')->assertOk();
+
+        $this->assertSame(1, \App\Models\Issue::where('project_id', $this->project->id)
+            ->where('title', 'Test failure: Login test')
+            ->count());
+    }
+
     // -------------------------------------------------------------------------
     // report
     // -------------------------------------------------------------------------
@@ -791,5 +959,28 @@ class TestSessionControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.summary.pass', 1)
             ->assertJsonPath('data.summary.skipped', 1);
+    }
+
+    public function test_report_counts_stay_scenario_level_when_case_results_exist(): void
+    {
+        $session  = $this->makeSession(['title' => 'Session with cases']);
+        $scenario = $this->makeTestableScenario();
+        $testCase = $this->makeTestCase($scenario);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+
+        $this->getJson($this->sessionUrl($session) . '/report')
+            ->assertOk()
+            ->assertJsonPath('data.summary.pass', 1)
+            ->assertJsonCount(1, 'data.results');
     }
 }
