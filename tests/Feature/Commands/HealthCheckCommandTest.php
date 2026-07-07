@@ -2,10 +2,11 @@
 
 namespace Tests\Feature\Commands;
 
+use App\Clients\OllamaClient;
+use App\Clients\TogetherAiClient;
 use App\Contracts\AuthGatewayClientContract;
 use App\Contracts\GarageAdminClientContract;
 use App\Contracts\GraphClientContract;
-use App\Contracts\OllamaClientContract;
 use App\Contracts\QdrantClientContract;
 use App\Contracts\ZincSearchClientContract;
 use Illuminate\Support\Facades\DB;
@@ -20,11 +21,16 @@ class HealthCheckCommandTest extends TestCase
             AuthGatewayClientContract::class,
             GarageAdminClientContract::class,
             GraphClientContract::class,
-            OllamaClientContract::class,
             QdrantClientContract::class,
             ZincSearchClientContract::class,
         ] as $contract) {
             $this->mock($contract)
+                ->shouldReceive('ping')
+                ->andReturn($healthy);
+        }
+
+        foreach ([OllamaClient::class, TogetherAiClient::class] as $client) {
+            $this->mock($client)
                 ->shouldReceive('ping')
                 ->andReturn($healthy);
         }
@@ -64,6 +70,7 @@ class HealthCheckCommandTest extends TestCase
             ->expectsOutputToContain('ZincSearch')
             ->expectsOutputToContain('Qdrant')
             ->expectsOutputToContain('Ollama')
+            ->expectsOutputToContain('Together AI')
             ->expectsOutputToContain('M365 Graph')
             ->expectsOutputToContain('Garage S3');
     }
