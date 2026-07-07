@@ -261,7 +261,7 @@ class TestSessionController extends Controller
             'executed_at' => now(),
         ]));
 
-        return new TestSessionResultResource($result->fresh()->load('testScenario'));
+        return new TestSessionResultResource($result->fresh()->load(['testScenario', 'attachments.createdBy']));
     }
 
     /**
@@ -310,7 +310,7 @@ class TestSessionController extends Controller
 
         $testSession->recomputeScenarioResult($testScenario->id);
 
-        return new TestSessionResultResource($result->fresh()->load(['testScenario', 'testCase']));
+        return new TestSessionResultResource($result->fresh()->load(['testScenario', 'testCase', 'attachments.createdBy']));
     }
 
     /**
