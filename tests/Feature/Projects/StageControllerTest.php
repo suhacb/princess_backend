@@ -125,6 +125,28 @@ class StageControllerTest extends TestCase
             ->assertJsonValidationErrors(['sequence']);
     }
 
+    public function test_store_returns_422_when_sequence_is_null(): void
+    {
+        $this->postJson("/api/projects/{$this->project->id}/stages", [
+            'name'     => 'Initiation',
+            'type'     => StageType::Initiation->value,
+            'sequence' => null,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['sequence']);
+    }
+
+    public function test_store_returns_422_when_status_is_null(): void
+    {
+        $this->postJson("/api/projects/{$this->project->id}/stages", [
+            'name'   => 'Initiation',
+            'type'   => StageType::Initiation->value,
+            'status' => null,
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+    }
+
     public function test_store_returns_422_when_planned_start_is_invalid_date(): void
     {
         $this->postJson("/api/projects/{$this->project->id}/stages", [
@@ -293,6 +315,24 @@ class StageControllerTest extends TestCase
             ->assertJsonValidationErrors(['sequence']);
     }
 
+    public function test_update_returns_422_when_sequence_is_null(): void
+    {
+        $stage = Stage::factory()->create(['project_id' => $this->project->id]);
+
+        $this->putJson("/api/projects/{$this->project->id}/stages/{$stage->id}", ['sequence' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['sequence']);
+    }
+
+    public function test_update_returns_422_when_status_is_null(): void
+    {
+        $stage = Stage::factory()->create(['project_id' => $this->project->id]);
+
+        $this->putJson("/api/projects/{$this->project->id}/stages/{$stage->id}", ['status' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['status']);
+    }
+
     public function test_update_returns_422_when_version_is_zero(): void
     {
         $stage = Stage::factory()->create(['project_id' => $this->project->id]);
@@ -307,6 +347,15 @@ class StageControllerTest extends TestCase
         $stage = Stage::factory()->create(['project_id' => $this->project->id]);
 
         $this->putJson("/api/projects/{$this->project->id}/stages/{$stage->id}", ['version' => -1])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['version']);
+    }
+
+    public function test_update_returns_422_when_version_is_null(): void
+    {
+        $stage = Stage::factory()->create(['project_id' => $this->project->id]);
+
+        $this->putJson("/api/projects/{$this->project->id}/stages/{$stage->id}", ['version' => null])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['version']);
     }

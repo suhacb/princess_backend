@@ -14,9 +14,9 @@ class StoreStageRequest extends FormRequest
         return [
             'name'              => ['required', 'string', 'max:255'],
             'type'              => ['required', Rule::enum(StageType::class)],
-            'sequence'          => ['nullable', 'integer', 'min:0'],
+            'sequence'          => ['integer', 'min:0'],
             'description'       => ['nullable', 'string'],
-            'status'            => ['nullable', Rule::enum(StageStatus::class)],
+            'status'            => [Rule::enum(StageStatus::class)],
             'planned_start'     => ['nullable', 'date'],
             'planned_end'       => ['nullable', 'date', 'after_or_equal:planned_start'],
             'actual_start'      => ['nullable', 'date'],
