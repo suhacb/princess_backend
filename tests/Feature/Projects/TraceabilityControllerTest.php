@@ -12,6 +12,7 @@ use App\Models\AcceptanceCriterion;
 use App\Models\Person;
 use App\Models\Project;
 use App\Models\Requirement;
+use App\Models\TestCase as TestCaseModel;
 use App\Models\TestScenario;
 use App\Models\TestSession;
 use App\Models\TestSessionResult;
@@ -157,6 +158,192 @@ class TraceabilityControllerTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.acceptance_criteria.0.test_scenarios.0.latest_supplier_result', 'pass')
             ->assertJsonPath('data.0.acceptance_criteria.0.test_scenarios.0.latest_client_result', null);
+    }
+
+    public function test_includes_test_cases_nested_under_scenarios(): void
+    {
+        $req      = $this->makeClassicReq();
+        $ac       = $this->makeAc($req);
+        $scenario = $this->makeScenario();
+        $scenario->acceptanceCriteria()->attach($ac->id);
+
+        $testCase = TestCaseModel::factory()->create([
+            'test_scenario_id' => $scenario->id,
+            'project_id'       => $this->project->id,
+            'created_by'       => $this->person->id,
+            'title'            => 'Login with valid credentials',
+        ]);
+
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonCount(1, 'data.0.acceptance_criteria.0.test_scenarios.0.test_cases')
+            ->assertJsonPath('data.0.acceptance_criteria.0.test_scenarios.0.test_cases.0.id', $testCase->id)
+            ->assertJsonPath('data.0.acceptance_criteria.0.test_scenarios.0.test_cases.0.title', 'Login with valid credentials')
+            ->assertJsonPath('data.0.acceptance_criteria.0.test_scenarios.0.test_cases.0.priority', $testCase->priority->value)
+            ->assertJsonPath('data.0.acceptance_criteria.0.test_scenarios.0.test_cases.0.type', $testCase->type->value);
+    }
+
+    // -------------------------------------------------------------------------
+    // stats
+    // -------------------------------------------------------------------------
+
+    public function test_stats_are_zero_for_empty_project(): void
+    {
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonPath('stats.acs_total', 0)
+            ->assertJsonPath('stats.acs_with_test', 0)
+            ->assertJsonPath('stats.acs_with_test_pct', 0)
+            ->assertJsonPath('stats.test_cases_total', 0)
+            ->assertJsonPath('stats.test_cases_passed', 0)
+            ->assertJsonPath('stats.test_cases_passed_pct', 0);
+    }
+
+    public function test_acs_with_test_is_structural_regardless_of_execution(): void
+    {
+        $req = $this->makeClassicReq();
+        $acWithScenario = $this->makeAc($req);
+        $acWithoutScenario = $this->makeAc($req);
+
+        $scenario = $this->makeScenario();
+        $scenario->acceptanceCriteria()->attach($acWithScenario->id);
+
+        // No test session result created at all — the AC still counts as "has a test" structurally.
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonPath('stats.acs_total', 2)
+            ->assertJsonPath('stats.acs_with_test', 1)
+            ->assertJsonPath('stats.acs_with_test_pct', 50);
+    }
+
+    public function test_test_cases_passed_uses_latest_test_case_level_result(): void
+    {
+        $req      = $this->makeClassicReq();
+        $ac       = $this->makeAc($req);
+        $scenario = $this->makeScenario();
+        $scenario->acceptanceCriteria()->attach($ac->id);
+
+        $testCase = TestCaseModel::factory()->create([
+            'test_scenario_id' => $scenario->id,
+            'project_id'       => $this->project->id,
+            'created_by'       => $this->person->id,
+        ]);
+
+        $olderSession = TestSession::factory()->completed()->create([
+            'project_id'   => $this->project->id,
+            'tester_id'    => $this->person->id,
+            'team_type'    => TeamType::Supplier->value,
+            'created_by'   => $this->person->id,
+            'session_date' => now()->subDay(),
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $olderSession->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::Fail->value,
+        ]);
+
+        $newerSession = TestSession::factory()->completed()->create([
+            'project_id'   => $this->project->id,
+            'tester_id'    => $this->person->id,
+            'team_type'    => TeamType::Supplier->value,
+            'created_by'   => $this->person->id,
+            'session_date' => now(),
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $newerSession->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonPath('stats.test_cases_total', 1)
+            ->assertJsonPath('stats.test_cases_passed', 1)
+            ->assertJsonPath('stats.test_cases_passed_pct', 100);
+    }
+
+    public function test_test_cases_passed_falls_back_to_scenario_level_result_when_no_test_case_level_row(): void
+    {
+        $req      = $this->makeClassicReq();
+        $ac       = $this->makeAc($req);
+        $scenario = $this->makeScenario();
+        $scenario->acceptanceCriteria()->attach($ac->id);
+
+        TestCaseModel::factory()->create([
+            'test_scenario_id' => $scenario->id,
+            'project_id'       => $this->project->id,
+            'created_by'       => $this->person->id,
+        ]);
+
+        // Pre-migration style result: scoped to the scenario only, no test_case_id.
+        $session = $this->makeCompletedSession(TeamType::Supplier->value);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonPath('stats.test_cases_total', 1)
+            ->assertJsonPath('stats.test_cases_passed', 1)
+            ->assertJsonPath('stats.test_cases_passed_pct', 100);
+    }
+
+    public function test_test_case_with_no_result_at_all_is_not_counted_as_passed(): void
+    {
+        $req      = $this->makeClassicReq();
+        $ac       = $this->makeAc($req);
+        $scenario = $this->makeScenario();
+        $scenario->acceptanceCriteria()->attach($ac->id);
+
+        TestCaseModel::factory()->create([
+            'test_scenario_id' => $scenario->id,
+            'project_id'       => $this->project->id,
+            'created_by'       => $this->person->id,
+        ]);
+
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonPath('stats.test_cases_total', 1)
+            ->assertJsonPath('stats.test_cases_passed', 0)
+            ->assertJsonPath('stats.test_cases_passed_pct', 0);
+    }
+
+    public function test_derived_status_unaffected_by_test_case_level_stats(): void
+    {
+        // Regression guard: derived_status stays scenario-level even though a test-case-level
+        // result exists and disagrees (fails at the test-case level, passes at scenario level).
+        $req      = $this->makeClassicReq();
+        $ac       = $this->makeAc($req, ['accepted_at' => now()]);
+        $scenario = $this->makeScenario();
+        $scenario->acceptanceCriteria()->attach($ac->id);
+
+        $testCase = TestCaseModel::factory()->create([
+            'test_scenario_id' => $scenario->id,
+            'project_id'       => $this->project->id,
+            'created_by'       => $this->person->id,
+        ]);
+
+        $session = $this->makeCompletedSession(TeamType::Supplier->value);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'result'           => TestResultStatus::Pass->value,
+        ]);
+        TestSessionResult::create([
+            'test_session_id'  => $session->id,
+            'test_scenario_id' => $scenario->id,
+            'test_case_id'     => $testCase->id,
+            'result'           => TestResultStatus::Fail->value,
+        ]);
+
+        $this->getJson($this->url())
+            ->assertOk()
+            ->assertJsonPath('data.0.derived_status', 'covered')
+            ->assertJsonPath('stats.test_cases_passed', 0);
     }
 
     // -------------------------------------------------------------------------
