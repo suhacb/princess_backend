@@ -15,6 +15,7 @@ class UpdateTestCaseResultTestSessionRequest extends FormRequest
             'step_results'                  => ['nullable', 'array'],
             'step_results.*.step_index'     => ['required', 'integer', 'min:0'],
             'step_results.*.result'         => ['required', Rule::in(['pass', 'fail', 'blocked'])],
+            // Doubles as the tester's freeform notes/observation for this step.
             'step_results.*.actual_result'  => ['nullable', 'string'],
             'step_results.*.defect_ref'     => ['nullable', 'string', 'max:255'],
             'notes'                         => ['nullable', 'string'],

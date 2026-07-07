@@ -14,6 +14,7 @@ use App\Http\Controllers\VarianceController;
 use App\Http\Controllers\TestCaseController;
 use App\Http\Controllers\TestScenarioController;
 use App\Http\Controllers\TestSessionController;
+use App\Http\Controllers\TestSessionResultAttachmentController;
 use App\Http\Controllers\TestSessionPlanController;
 use App\Http\Controllers\TraceabilityController;
 use App\Http\Controllers\ChangeLogController;
@@ -212,6 +213,12 @@ Route::middleware('verify.frontend')->scopeBindings()->group(function () {
         ->withoutScopedBindings();
     Route::put('projects/{project}/test-sessions/{testSession}/results/{testScenario}/test-cases/{testCase}', [TestSessionController::class, 'updateTestCaseResult'])
         ->name('projects.test-sessions.results.test-cases.update')
+        ->withoutScopedBindings();
+    Route::post('projects/{project}/test-sessions/{testSession}/results/{testScenario}/test-cases/{testCase}/attachments', [TestSessionResultAttachmentController::class, 'store'])
+        ->name('projects.test-sessions.results.test-cases.attachments.store')
+        ->withoutScopedBindings();
+    Route::delete('projects/{project}/test-sessions/{testSession}/attachments/{attachment}', [TestSessionResultAttachmentController::class, 'destroy'])
+        ->name('projects.test-sessions.attachments.destroy')
         ->withoutScopedBindings();
     Route::get('projects/{project}/test-sessions/{testSession}/report', [TestSessionController::class, 'report'])
         ->name('projects.test-sessions.report');

@@ -6,6 +6,7 @@ use App\Enums\TestResultStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TestSessionResult extends Model
 {
@@ -13,6 +14,10 @@ class TestSessionResult extends Model
 
     public $timestamps = false;
 
+    /**
+     * step_results entries: {step_index, result, actual_result, defect_ref}.
+     * `actual_result` doubles as the tester's freeform notes/observation for that step.
+     */
     protected $fillable = [
         'test_session_id',
         'test_scenario_id',
@@ -43,6 +48,11 @@ class TestSessionResult extends Model
     public function testCase(): BelongsTo
     {
         return $this->belongsTo(TestCase::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TestSessionResultAttachment::class);
     }
 
     /**

@@ -19,6 +19,9 @@ class TestSessionResultResource extends JsonResource
             'notes'           => $this->notes,
             'defect_ref'      => $this->defect_ref,
             'executed_at'     => $this->executed_at,
+            'attachments'     => $this->whenLoaded('attachments', fn () => TestSessionResultAttachmentResource::collection($this->attachments)
+                ->groupBy(fn ($attachment) => $attachment->step_index ?? 'case')
+            ),
         ];
     }
 }
