@@ -13,7 +13,7 @@ class UpdateStageRequest extends FormRequest
     {
         return [
             'name'              => ['sometimes', 'required', 'string', 'max:255'],
-            'type'              => ['nullable', Rule::enum(StageType::class)],
+            'type'              => ['sometimes', 'required', Rule::enum(StageType::class)],
             'sequence'          => ['nullable', 'integer', 'min:0'],
             'description'       => ['nullable', 'string'],
             'status'            => ['nullable', Rule::enum(StageStatus::class)],

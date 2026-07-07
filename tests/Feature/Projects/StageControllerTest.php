@@ -263,6 +263,18 @@ class StageControllerTest extends TestCase
             ->assertJsonValidationErrors(['type']);
     }
 
+    public function test_update_returns_422_when_type_is_null(): void
+    {
+        $stage = Stage::factory()->create([
+            'project_id' => $this->project->id,
+            'type'       => StageType::Initiation,
+        ]);
+
+        $this->putJson("/api/projects/{$this->project->id}/stages/{$stage->id}", ['type' => null])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['type']);
+    }
+
     public function test_update_returns_422_when_name_is_empty_string(): void
     {
         $stage = Stage::factory()->create(['project_id' => $this->project->id]);
