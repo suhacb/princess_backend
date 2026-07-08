@@ -24,7 +24,7 @@ class LlmRouterService
     /**
      * @param array<int, array{role: string, content: string}> $messages
      */
-    public function chat(?string $tier, array $messages, array $options = [], ?string $caller = null): LlmResponse
+    public function chat(?string $tier, array $messages, array $options = [], ?string $caller = null, ?int $promptTemplateId = null): LlmResponse
     {
         $tier ??= $this->defaultTier;
         $chain = $this->tiers[$tier] ?? null;
@@ -45,11 +45,11 @@ class LlmRouterService
             try {
                 $response = $provider->chat($messages, [...$options, 'model' => $candidate['model']]);
 
-                $this->logUsage($candidate['provider'], $candidate['model'], $tier, $caller, $response, success: true);
+                $this->logUsage($candidate['provider'], $candidate['model'], $tier, $caller, $promptTemplateId, $response, success: true);
 
                 return $response;
             } catch (Throwable $e) {
-                $this->logUsage($candidate['provider'], $candidate['model'], $tier, $caller, null, success: false, error: $e->getMessage());
+                $this->logUsage($candidate['provider'], $candidate['model'], $tier, $caller, $promptTemplateId, null, success: false, error: $e->getMessage());
 
                 $lastException = $e;
             }
@@ -58,9 +58,9 @@ class LlmRouterService
         throw new RuntimeException("All providers failed for LLM tier [{$tier}].", previous: $lastException);
     }
 
-    public function generate(?string $tier, string $prompt, array $options = [], ?string $caller = null): LlmResponse
+    public function generate(?string $tier, string $prompt, array $options = [], ?string $caller = null, ?int $promptTemplateId = null): LlmResponse
     {
-        return $this->chat($tier, [['role' => 'user', 'content' => $prompt]], $options, $caller);
+        return $this->chat($tier, [['role' => 'user', 'content' => $prompt]], $options, $caller, $promptTemplateId);
     }
 
     private function logUsage(
@@ -68,21 +68,23 @@ class LlmRouterService
         string $model,
         string $tier,
         ?string $caller,
+        ?int $promptTemplateId,
         ?LlmResponse $response,
         bool $success,
         ?string $error = null,
     ): void {
         LlmUsageLog::create([
-            'provider'          => $provider,
-            'model'             => $model,
-            'tier'              => $tier,
-            'caller'            => $caller,
-            'prompt_tokens'     => $response?->promptTokens,
-            'completion_tokens' => $response?->completionTokens,
-            'total_tokens'      => $response?->totalTokens,
-            'latency_ms'        => $response?->latencyMs ?? 0,
-            'success'           => $success,
-            'error_message'     => $error,
+            'provider'           => $provider,
+            'model'              => $model,
+            'tier'               => $tier,
+            'caller'             => $caller,
+            'prompt_template_id' => $promptTemplateId,
+            'prompt_tokens'      => $response?->promptTokens,
+            'completion_tokens'  => $response?->completionTokens,
+            'total_tokens'       => $response?->totalTokens,
+            'latency_ms'         => $response?->latencyMs ?? 0,
+            'success'            => $success,
+            'error_message'      => $error,
         ]);
     }
 }

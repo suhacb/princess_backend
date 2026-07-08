@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LlmUsageLog extends Model
 {
@@ -11,6 +12,7 @@ class LlmUsageLog extends Model
         'model',
         'tier',
         'caller',
+        'prompt_template_id',
         'prompt_tokens',
         'completion_tokens',
         'total_tokens',
@@ -22,4 +24,9 @@ class LlmUsageLog extends Model
     protected $casts = [
         'success' => 'boolean',
     ];
+
+    public function promptTemplate(): BelongsTo
+    {
+        return $this->belongsTo(PromptTemplate::class);
+    }
 }

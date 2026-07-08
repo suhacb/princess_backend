@@ -43,6 +43,7 @@ use App\Http\Controllers\MeetingActionItemController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\StageController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\PromptTemplateController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('health', [HealthController::class, 'check'])->name('health');
@@ -60,6 +61,8 @@ Route::post('onlyoffice/callback/{key}', OnlyOfficeCallbackController::class)
     ->name('onlyoffice.callback');
 
 Route::middleware('verify.frontend')->scopeBindings()->group(function () {
+    Route::apiResource('prompt-templates', PromptTemplateController::class)->only(['index', 'store', 'show']);
+
     Route::apiResource('projects', ProjectController::class);
     Route::patch('projects/{project}/current-stage', [ProjectController::class, 'setCurrentStage'])
         ->name('projects.set-current-stage');

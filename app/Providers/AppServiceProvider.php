@@ -14,6 +14,7 @@ use App\Models\Plan;
 use App\Models\Product;
 use App\Models\ProductDependency;
 use App\Models\Project;
+use App\Models\PromptTemplate;
 use App\Models\ProjectMember;
 use App\Models\ProjectProductDescription;
 use App\Models\DocumentVersion;
@@ -44,6 +45,7 @@ use App\Policies\ProductFlowPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\ProjectMemberPolicy;
 use App\Policies\ProjectPolicy;
+use App\Policies\PromptTemplatePolicy;
 use App\Policies\ProjectProductDescriptionPolicy;
 use App\Policies\DocumentVersionPolicy;
 use App\Policies\QaDocumentPolicy;
@@ -98,5 +100,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(CheckpointReport::class, CheckpointReportPolicy::class);
         Gate::policy(HighlightReport::class, HighlightReportPolicy::class);
         Gate::policy(ExceptionReport::class, ExceptionReportPolicy::class);
+        Gate::policy(PromptTemplate::class, PromptTemplatePolicy::class);
     }
 }

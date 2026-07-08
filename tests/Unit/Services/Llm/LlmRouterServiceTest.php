@@ -163,6 +163,27 @@ class LlmRouterServiceTest extends TestCase
         $this->assertDatabaseHas('llm_usage_logs', ['tier' => 'fast']);
     }
 
+    public function test_chat_persists_prompt_template_id_on_usage_log_when_provided(): void
+    {
+        $person = \App\Models\Person::factory()->create();
+        $template = \App\Models\PromptTemplate::factory()->create(['created_by' => $person->id]);
+
+        $response = new LlmResponse(content: 'ok', provider: 'ollama', model: 'gemma4:e4b', latencyMs: 10);
+
+        $router = new LlmRouterService(
+            providers: ['ollama' => $this->fakeProvider($response)],
+            tiers: $this->tiers(),
+            defaultTier: 'fast',
+        );
+
+        $router->chat('fast', [['role' => 'user', 'content' => 'hi']], promptTemplateId: $template->id);
+
+        $this->assertDatabaseHas('llm_usage_logs', [
+            'provider'           => 'ollama',
+            'prompt_template_id' => $template->id,
+        ]);
+    }
+
     public function test_generate_wraps_prompt_and_delegates_to_chat(): void
     {
         $response = new LlmResponse(content: 'ok', provider: 'ollama', model: 'gemma4:e4b', latencyMs: 5);
