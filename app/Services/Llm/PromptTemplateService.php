@@ -11,13 +11,15 @@ class PromptTemplateService
     public function createVersion(string $name, string $body, int $createdBy): PromptTemplate
     {
         return DB::transaction(function () use ($name, $body, $createdBy) {
-            $existing = PromptTemplate::where('name', $name)->lockForUpdate()->get();
+            // A row-level lock only protects rows that already exist; it does nothing for the
+            // "first version of a brand-new name" case and doesn't stop a second transaction from
+            // recomputing the same next version once it unblocks. An advisory lock keyed by name
+            // serializes all createVersion() calls for that name, including brand-new names.
+            DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$name]);
 
-            $existing->where('active', true)->each(function (PromptTemplate $template) {
-                $template->update(['active' => false]);
-            });
+            $nextVersion = (PromptTemplate::where('name', $name)->max('version') ?? 0) + 1;
 
-            $nextVersion = ($existing->max('version') ?? 0) + 1;
+            PromptTemplate::where('name', $name)->where('active', true)->update(['active' => false]);
 
             return PromptTemplate::create([
                 'name'       => $name,

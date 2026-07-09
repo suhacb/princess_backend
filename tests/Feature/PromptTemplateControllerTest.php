@@ -89,11 +89,20 @@ class PromptTemplateControllerTest extends TestCase
             ->assertJsonPath('data.id', $template->id);
     }
 
-    public function test_unauthenticated_requests_are_rejected(): void
+    public function test_guest_create_is_forbidden_by_policy(): void
     {
         auth()->logout();
 
         $this->postJson('/api/prompt-templates', ['name' => 'x', 'body' => 'y'])
             ->assertForbidden();
+    }
+
+    public function test_route_is_not_exempt_from_verify_frontend_middleware(): void
+    {
+        $route = collect(\Illuminate\Support\Facades\Route::getRoutes())
+            ->first(fn ($r) => $r->uri() === 'api/prompt-templates' && in_array('POST', $r->methods()));
+
+        $this->assertNotNull($route);
+        $this->assertContains('verify.frontend', $route->gatherMiddleware());
     }
 }
